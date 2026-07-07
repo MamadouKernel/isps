@@ -1,0 +1,132 @@
+@{
+    ViewData["Title"] = "Habilitations & formations";
+    var expiringSoon = ViewBag.ExpiringSoon as IReadOnlyList<Habilitation> ?? new List<Habilitation>();
+    var expired = ViewBag.Expired as IReadOnlyList<Habilitation> ?? new List<Habilitation>();
+    var all = ViewBag.All as IReadOnlyList<Habilitation> ?? new List<Habilitation>();
+    var svc = ViewBag.Service as IHabilitationService;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+}
+
+<div class="mb-5">
+    <h1 class="text-xl sm:text-2xl font-bold text-white">🎓 Habilitations & formations</h1>
+    <p class="text-xs sm:text-sm text-slate-400">Suivi des expirations — alertes auto envoyées en amont</p>
+</div>
+
+<div class="grid grid-cols-2 gap-3 mb-5">
+    <div class="card p-4">
+        <div class="text-xs uppercase text-slate-400 tracking-wider">À renouveler (60 jours)</div>
+        <div class="text-3xl font-bold mono text-amber-400 mt-1">@expiringSoon.Count</div>
+    </div>
+    <div class="card p-4">
+        <div class="text-xs uppercase text-slate-400 tracking-wider">Expirées</div>
+        <div class="text-3xl font-bold mono text-red-400 mt-1">@expired.Count</div>
+    </div>
+</div>
+
+@if (expired.Count > 0)
+{
+    <section class="card p-4 mb-5">
+        <h3 class="font-semibold text-red-400 mb-3 text-sm uppercase">⚠ Expirées (action immédiate)</h3>
+        <div class="table-wrap">
+            <table class="w-full text-sm">
+                <thead class="text-xs text-slate-400 border-b border-slate-700">
+                    <tr><th class="text-left p-2">Agent</th><th class="text-left p-2">Habilitation</th><th class="text-right p-2 whitespace-nowrap">Expirée le</th><th class="text-right p-2">Depuis</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in expired)
+                    {
+                        var days = svc?.DaysToExpiry(h) ?? 0;
+                        <tr class="border-b border-slate-800">
+                            <td class="p-2"><a class="text-cyan-300" asp-controller="Personnel" asp-action="Details" asp-route-id="@h.AgentId">@h.Agent?.Name</a></td>
+                            <td class="p-2 text-slate-200">@h.Title</td>
+                            <td class="p-2 text-right mono text-slate-400">@h.ExpiresAt.ToString("dd/MM/yyyy")</td>
+                            <td class="p-2 text-right"><span class="badge-rouge px-2 py-0.5 rounded text-xs">@Math.Abs(days) j</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<section class="card p-4">
+    <h3 class="font-semibold text-amber-400 mb-3 text-sm uppercase">À renouveler dans les 60 jours</h3>
+    @if (expiringSoon.Count == 0)
+    {
+        <p class="text-slate-400 text-sm">Aucune habilitation n'arrive à échéance prochainement.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="w-full text-sm">
+                <thead class="text-xs text-slate-400 border-b border-slate-700">
+                    <tr><th class="text-left p-2">Agent</th><th class="text-left p-2">Habilitation</th><th class="text-right p-2 whitespace-nowrap">Expire le</th><th class="text-right p-2">Reste</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in expiringSoon)
+                    {
+                        var days = svc?.DaysToExpiry(h) ?? 0;
+                        var cls = days < 30 ? "badge-rouge" : "badge-ambre";
+                        <tr class="border-b border-slate-800">
+                            <td class="p-2"><a class="text-cyan-300" asp-controller="Personnel" asp-action="Details" asp-route-id="@h.AgentId">@h.Agent?.Name</a></td>
+                            <td class="p-2 text-slate-200">@h.Title</td>
+                            <td class="p-2 text-right mono text-slate-400">@h.ExpiresAt.ToString("dd/MM/yyyy")</td>
+                            <td class="p-2 text-right"><span class="@cls px-2 py-0.5 rounded text-xs">J-@days</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="card p-4 mt-5">
+    <h3 class="font-semibold text-cyan-400 mb-3 text-sm uppercase">📋 Toutes les habilitations (@all.Count)</h3>
+    @if (all.Count == 0)
+    {
+        <p class="text-slate-400 text-sm">Aucune habilitation enregistrée. Ajoutez-en depuis la fiche d'un agent (module Personnel).</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="w-full text-sm">
+                <thead class="text-xs text-slate-400 border-b border-slate-700">
+                    <tr>
+                        <th class="text-left p-2">Agent</th>
+                        <th class="text-left p-2">Catégorie</th>
+                        <th class="text-left p-2">Habilitation</th>
+                        <th class="text-left p-2">Organisme</th>
+                        <th class="text-right p-2 whitespace-nowrap">Expire le</th>
+                        @if (canEdit) { <th class="text-right p-2">Actions</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in all)
+                    {
+                        var status = svc?.ClassifyExpiry(h) ?? HabilitationStatus.Valide;
+                        var cls = status switch { HabilitationStatus.Expiree => "badge-rouge", HabilitationStatus.Urgent => "badge-rouge", HabilitationStatus.Bientot => "badge-ambre", _ => "badge-vert" };
+                        <tr class="border-b border-slate-800">
+                            <td class="p-2"><a class="text-cyan-300" asp-controller="Personnel" asp-action="Details" asp-route-id="@h.AgentId">@h.Agent?.Name</a></td>
+                            <td class="p-2 text-slate-400">@h.Category</td>
+                            <td class="p-2 text-slate-200">@h.Title</td>
+                            <td class="p-2 text-slate-400">@h.Issuer</td>
+                            <td class="p-2 text-right whitespace-nowrap"><span class="@cls px-2 py-0.5 rounded text-xs mono">@h.ExpiresAt.ToString("dd/MM/yyyy")</span></td>
+                            @if (canEdit)
+                            {
+                                <td class="p-2 text-right whitespace-nowrap">
+                                    <a asp-action="Edit" asp-route-id="@h.Id" class="btn-secondary text-xs" title="Modifier">✏️</a>
+                                    <form asp-action="Delete" method="post" class="inline" data-confirm="Déplacer vers la corbeille ?">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@h.Id" />
+                                        <input type="hidden" name="agentId" value="@h.AgentId" />
+                                        <button class="btn-danger text-xs">🗑️</button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -1,0 +1,92 @@
+@model ExternalContact
+@{
+    ViewData["Title"] = Model.Name;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">@Model.Name</h1>
+        <div class="text-sm text-slate-400 mt-1">@Model.Type · @Model.Role</div>
+        @if (Model.IsEmergency24x7) { <span class="badge-rouge text-xs px-2 py-1 rounded mt-2 inline-block">Disponible 24/7</span> }
+    </div>
+    <div class="flex gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "Contacts",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Déplacer ce contact vers la corbeille ?"
+            })
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <aside class="card p-5 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Contact</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Téléphone principal</dt><dd class="text-cyan-300 mono">@Model.PrimaryPhone</dd></div>
+            <div><dt class="text-slate-500 text-xs">Téléphone d'urgence</dt><dd class="text-red-300 mono">@Model.EmergencyPhone</dd></div>
+            <div><dt class="text-slate-500 text-xs">Email</dt><dd class="text-cyan-300">@Model.Email</dd></div>
+            <div><dt class="text-slate-500 text-xs">Canal radio</dt><dd class="text-slate-200 mono">@Model.RadioChannel</dd></div>
+            <div><dt class="text-slate-500 text-xs">Adresse</dt><dd class="text-slate-200">@Model.Address</dd></div>
+        </dl>
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="border-t border-slate-700 pt-3 mt-3">
+                <p class="text-sm text-slate-300 whitespace-pre-wrap">@Model.Notes</p>
+            </div>
+        }
+    </aside>
+
+    <section class="card p-5 lg:col-span-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-3">📜 Journal des interactions (@Model.Interactions.Count)</h3>
+
+        @if (Model.Interactions.Count == 0)
+        {
+            <p class="text-slate-400 text-sm">Aucune interaction enregistrée.</p>
+        }
+        else
+        {
+            <div class="space-y-2">
+                @foreach (var i in Model.Interactions.OrderByDescending(x => x.OccurredAt))
+                {
+                    <div class="border border-slate-700 rounded p-3 text-sm">
+                        <div class="flex items-start justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-2">
+                                <span class="badge-bleu text-[10px] px-2 py-0.5 rounded">@i.Channel</span>
+                                <span class="text-xs text-slate-400">@(i.Direction == InteractionDirection.Sortante ? "Sortante →" : "← Entrante")</span>
+                            </div>
+                            <span class="text-[11px] mono text-slate-500 whitespace-nowrap">@i.OccurredAt.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                        </div>
+                        <div class="text-slate-200 font-medium mt-1">@i.Subject</div>
+                        @if (!string.IsNullOrEmpty(i.Summary))
+                        {
+                            <p class="text-xs text-slate-300 mt-1 whitespace-pre-wrap">@i.Summary</p>
+                        }
+                        <div class="text-[11px] text-slate-500 mt-1">Traité par @i.HandledBy</div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (canEdit)
+        {
+            <details class="mt-4 pt-3 border-t border-slate-700">
+                <summary class="text-sm text-cyan-400 cursor-pointer">+ Consigner une interaction</summary>
+                <form asp-action="LogInteraction" asp-route-id="@Model.Id" method="post" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    @Html.AntiForgeryToken()
+                    <div><label class="block text-xs mb-1">Direction</label><select name="Direction" asp-items="Html.GetEnumSelectList<InteractionDirection>()"></select></div>
+                    <div><label class="block text-xs mb-1">Canal</label><select name="Channel" asp-items="Html.GetEnumSelectList<InteractionChannel>()"></select></div>
+                    <div class="md:col-span-2"><label class="block text-xs mb-1">Objet</label><input name="Subject" required /></div>
+                    <div class="md:col-span-2"><label class="block text-xs mb-1">Compte-rendu</label><textarea name="Summary" rows="3"></textarea></div>
+                    <div class="md:col-span-2 flex justify-end"><button class="btn-primary text-sm">✓ Enregistrer</button></div>
+                </form>
+            </details>
+        }
+    </section>
+</div>

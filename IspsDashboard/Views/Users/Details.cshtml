@@ -1,0 +1,22 @@
+@model UserListItem
+@{
+    ViewData["Title"] = Model.FullName;
+}
+<div class="max-w-lg mx-auto">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-white">@Model.FullName</h1>
+            <p class="text-sm text-slate-400">@Model.Email</p>
+        </div>
+        <div class="flex gap-2">
+            <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+        </div>
+    </div>
+    <div class="card p-5 space-y-2">
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Rôle</dt><dd><span class="badge-vert px-2 py-0.5 rounded text-xs">@Model.Role</span></dd></div>
+            <div><dt class="text-slate-500 text-xs">Créé le</dt><dd class="text-slate-200 mono">@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</dd></div>
+        </dl>
+    </div>
+</div>

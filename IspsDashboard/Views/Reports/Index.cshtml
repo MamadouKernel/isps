@@ -1,0 +1,51 @@
+@{
+    ViewData["Title"] = "Rapports PDF";
+    int defaultYear = ViewBag.DefaultYear as int? ?? DateTime.Now.Year;
+    int defaultMonth = ViewBag.DefaultMonth as int? ?? DateTime.Now.Month;
+    var years = ViewBag.Years as List<int> ?? new List<int>();
+    string[] monthNames = { "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre" };
+}
+
+<div class="mb-5">
+    <h1 class="text-xl sm:text-2xl font-bold text-white">📄 Rapports PDF</h1>
+    <p class="text-xs sm:text-sm text-slate-400">Rapport mensuel sûreté consolidé — direction, RSO, audits ISPS</p>
+</div>
+
+<div class="card p-5 sm:p-6 max-w-2xl">
+    <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-4">📅 Rapport mensuel sûreté</h3>
+    <p class="text-sm text-slate-400 mb-4">Génère un PDF prêt-à-imprimer contenant la synthèse KPI, les incidents, exercices, non-conformités et changements de niveau MARSEC du mois.</p>
+
+    <form id="reportForm" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <div>
+            <label class="block text-sm mb-1">Année</label>
+            <select id="year" class="w-full">
+                @foreach (var y in years)
+                {
+                    <option value="@y" selected="@(y == defaultYear)">@y</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm mb-1">Mois</label>
+            <select id="month" class="w-full">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <option value="@m" selected="@(m == defaultMonth)">@monthNames[m - 1]</option>
+                }
+            </select>
+        </div>
+        <button type="button" id="downloadBtn" class="btn-primary">📥 Télécharger le PDF</button>
+    </form>
+
+    <p class="text-xs text-slate-500 mt-4 border-t border-slate-700 pt-3">Émission journalisée dans le journal d'audit. Le document est confidentiel — diffusion restreinte aux ayants droit.</p>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const y = document.getElementById('year').value;
+            const m = document.getElementById('month').value;
+            window.location = `/Reports/Monthly/${y}/${m}`;
+        });
+    </script>
+}

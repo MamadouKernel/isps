@@ -1,0 +1,45 @@
+@model EditUserViewModel
+@{
+    ViewData["Title"] = $"Modifier {Model.FullName}";
+}
+<div class="max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold text-white mb-6">✏️ Modifier l'utilisateur</h1>
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="card p-6 space-y-4">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+
+        <div>
+            <label class="block text-sm mb-1">Email</label>
+            <input value="@Model.Email" class="w-full" disabled />
+        </div>
+        <div>
+            <label asp-for="FullName" class="block text-sm mb-1"></label>
+            <input asp-for="FullName" class="w-full" />
+            <span asp-validation-for="FullName"></span>
+        </div>
+        <div>
+            <label asp-for="Role" class="block text-sm mb-1"></label>
+            <select asp-for="Role" class="w-full">
+                <option value="@DataSeeder.AdminRole">Administrateur</option>
+                <option value="@DataSeeder.EditorRole">Éditeur</option>
+                <option value="@DataSeeder.ReaderRole">Lecteur</option>
+            </select>
+        </div>
+        <div>
+            <label asp-for="NewPassword" class="block text-sm mb-1"></label>
+            <input asp-for="NewPassword" type="password" class="w-full" autocomplete="new-password" />
+            <span asp-validation-for="NewPassword"></span>
+            <p class="text-xs text-slate-500 mt-1">Min 8 caractères, 1 majuscule, 1 chiffre, 1 symbole.</p>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary">Annuler</a>
+            <button type="submit" class="btn-primary">✓ Enregistrer</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

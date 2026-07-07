@@ -1,0 +1,85 @@
+@model RestrictedZone
+@{
+    ViewData["Title"] = Model.Code;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    string LevelClass(ZoneAccessLevel l) => l switch
+    {
+        ZoneAccessLevel.Sensible => "badge-rouge",
+        ZoneAccessLevel.Restreint => "badge-ambre",
+        ZoneAccessLevel.Controle => "badge-bleu",
+        _ => "badge-vert"
+    };
+    string StatusClass(ZoneStatus s) => s switch
+    {
+        ZoneStatus.Active => "badge-vert",
+        ZoneStatus.Verrouillee => "badge-rouge",
+        _ => "badge-ambre"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="mono text-2xl text-cyan-400 font-bold">@Model.Code</span>
+            <span class="@LevelClass(Model.AccessLevel) text-xs px-2 py-1 rounded">@Model.AccessLevel</span>
+            <span class="@StatusClass(Model.Status) text-xs px-2 py-1 rounded">@Model.Status</span>
+        </div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.Name</h1>
+    </div>
+    <div class="flex gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "Zones",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Déplacer cette zone vers la corbeille ?"
+            })
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="card p-5 lg:col-span-2 space-y-4">
+        @if (!string.IsNullOrEmpty(Model.Description))
+        {
+            <section><h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Description / Localisation</h3><p class="whitespace-pre-wrap text-slate-200">@Model.Description</p></section>
+        }
+        @if (!string.IsNullOrEmpty(Model.ProtectionMeasures))
+        {
+            <section><h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">🛡️ Mesures de protection</h3><p class="whitespace-pre-wrap text-slate-200">@Model.ProtectionMeasures</p></section>
+        }
+        @if (!string.IsNullOrEmpty(Model.AuthorizedPersonnel))
+        {
+            <section><h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">👥 Personnes / catégories autorisées</h3><p class="whitespace-pre-wrap text-slate-200">@Model.AuthorizedPersonnel</p></section>
+        }
+    </div>
+
+    <aside class="card p-5 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Caractéristiques</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Niveau d'accès</dt><dd><span class="@LevelClass(Model.AccessLevel) text-xs px-2 py-0.5 rounded">@Model.AccessLevel</span></dd></div>
+            <div><dt class="text-slate-500 text-xs">Responsable</dt><dd class="text-slate-200">@(string.IsNullOrEmpty(Model.ZoneManager) ? "—" : Model.ZoneManager)</dd></div>
+            <div><dt class="text-slate-500 text-xs">Escorte obligatoire</dt><dd class="text-slate-200">@(Model.RequiresEscort ? "Oui" : "Non")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Habilitation requise</dt><dd class="text-slate-200">@(Model.RequiresClearance ? "Oui" : "Non")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Vidéosurveillance</dt><dd class="text-slate-200">@(Model.CctvMonitored ? "🎥 Oui" : "Non")</dd></div>
+        </dl>
+
+        @if (canEdit)
+        {
+            <form asp-action="SetStatus" asp-route-id="@Model.Id" method="post" class="border-t border-slate-700 pt-3 mt-3 space-y-2">
+                @Html.AntiForgeryToken()
+                <label class="block text-xs uppercase text-cyan-400">État opérationnel</label>
+                <select name="status" class="w-full">
+                    @foreach (var s in Enum.GetValues<ZoneStatus>())
+                    {
+                        <option value="@((int)s)" selected="@(Model.Status == s)">@s</option>
+                    }
+                </select>
+                <button class="btn-primary w-full text-sm">✓ Mettre à jour l'état</button>
+            </form>
+        }
+    </aside>
+</div>

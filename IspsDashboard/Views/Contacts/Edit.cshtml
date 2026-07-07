@@ -1,0 +1,26 @@
+@model ExternalContact
+@{
+    ViewData["Title"] = $"Modifier {Model.Name}";
+}
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Modifier @Model.Name</h1></div>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label asp-for="Name" class="block text-sm mb-1"></label><input asp-for="Name" required /></div>
+        <div><label asp-for="Type" class="block text-sm mb-1"></label><select asp-for="Type" asp-items="Html.GetEnumSelectList<ContactType>()"></select></div>
+        <div><label asp-for="Role" class="block text-sm mb-1"></label><input asp-for="Role" /></div>
+        <div class="flex items-end"><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="IsEmergency24x7" value="true" checked="@Model.IsEmergency24x7" /><input type="hidden" name="IsEmergency24x7" value="false" /><span>Contact d'urgence 24/7</span></label></div>
+        <div><label asp-for="PrimaryPhone" class="block text-sm mb-1"></label><input asp-for="PrimaryPhone" /></div>
+        <div><label asp-for="EmergencyPhone" class="block text-sm mb-1"></label><input asp-for="EmergencyPhone" /></div>
+        <div><label asp-for="Email" class="block text-sm mb-1"></label><input asp-for="Email" /></div>
+        <div><label asp-for="RadioChannel" class="block text-sm mb-1"></label><input asp-for="RadioChannel" /></div>
+        <div class="md:col-span-2"><label asp-for="Address" class="block text-sm mb-1"></label><input asp-for="Address" /></div>
+        <div class="md:col-span-2"><label asp-for="Notes" class="block text-sm mb-1"></label><textarea asp-for="Notes" rows="3"></textarea></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

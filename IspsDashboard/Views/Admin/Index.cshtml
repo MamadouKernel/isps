@@ -1,0 +1,443 @@
+@model AdminViewModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@{
+    ViewData["Title"] = "Administration";
+    var notif = ViewBag.NotificationSettings as NotificationSettings ?? new NotificationSettings();
+    string logoUrl = "/images/logo.svg";
+    foreach (var ext in new[] { ".jpeg", ".jpg", ".png", ".webp", ".svg" })
+    {
+        if (System.IO.File.Exists(System.IO.Path.Combine(Env.WebRootPath, "images", "logo" + ext)))
+        { logoUrl = "/images/logo" + ext; break; }
+    }
+}
+
+<div class="mb-4 sm:mb-6">
+    <h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Panneau d'administration</h1>
+    <p class="text-xs sm:text-sm text-slate-400 mt-1">Modifiez les données du tableau de bord. Les changements sont sauvegardés en base et partagés en temps réel.</p>
+</div>
+
+<!-- Tabs (scroll horizontal sur mobile) -->
+<div class="border-b border-slate-700">
+    <div class="flex flex-wrap gap-1">
+        <button class="tab-btn active" data-tab="general">Général</button>
+        <button class="tab-btn" data-tab="cards">KPI Cartes</button>
+        <button class="tab-btn" data-tab="gauges">Jauges & Barres</button>
+        <button class="tab-btn" data-tab="agents">Agents</button>
+        <button class="tab-btn" data-tab="trainings">Entraînements</button>
+        <button class="tab-btn" data-tab="grand">Grandeur Nature</button>
+        <button class="tab-btn" data-tab="crisis">Gestion de Crise</button>
+        <button class="tab-btn" data-tab="table">Tableau KPIs</button>
+        <button class="tab-btn" data-tab="branding">🖼️ Logo</button>
+        <button class="tab-btn" data-tab="notifications">📧 Notifications</button>
+    </div>
+</div>
+
+<div class="card p-4 sm:p-6 rounded-t-none">
+    <!-- Général -->
+    <section data-pane="general">
+        <form asp-action="SaveSettings" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Settings.Id" />
+            <div><label class="block text-sm mb-1">Titre du terminal</label><input asp-for="Settings.TerminalTitle" class="w-full" /></div>
+            <div><label class="block text-sm mb-1">Période</label><input asp-for="Settings.Period" class="w-full" /></div>
+            <div><label class="block text-sm mb-1">Niveau ISPS (1-3)</label>
+                <select asp-for="Settings.IspsLevel" class="w-full">
+                    <option value="1">Niveau 1 — Normal</option>
+                    <option value="2">Niveau 2 — Renforcé</option>
+                    <option value="3">Niveau 3 — Exceptionnel</option>
+                </select>
+            </div>
+            <div><label class="block text-sm mb-1">Responsable adjoint</label><input asp-for="Settings.ResponsibleName" class="w-full" /></div>
+            <div><label class="block text-sm mb-1">Effectif total requis</label><input asp-for="Settings.AgentsRequired" type="number" class="w-full" /></div>
+            <div class="md:col-span-2 flex justify-end"><button type="submit" class="btn-primary">✓ Appliquer</button></div>
+        </form>
+    </section>
+
+    <!-- Cards -->
+    <section data-pane="cards" class="hidden">
+        <form asp-action="SaveKpiCards" method="post" class="space-y-3">
+            @Html.AntiForgeryToken()
+            @for (int i = 0; i < Model.KpiCards.Count; i++)
+            {
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2 border border-slate-700 p-3 rounded items-center">
+                    <input type="hidden" name="cards[@i].Id" value="@Model.KpiCards[i].Id" />
+                    <input name="cards[@i].Label" value="@Model.KpiCards[i].Label" placeholder="Libellé" />
+                    <input name="cards[@i].Value" value="@Model.KpiCards[i].Value" placeholder="Valeur" />
+                    <input name="cards[@i].Subtitle" value="@Model.KpiCards[i].Subtitle" placeholder="Sous-titre" class="lg:col-span-2" />
+                    <input name="cards[@i].TrendBadge" value="@Model.KpiCards[i].TrendBadge" placeholder="Badge" />
+                    <select name="cards[@i].Color">
+                        @foreach (var c in Enum.GetValues<KpiCardColor>())
+                        {
+                            <option value="@((int)c)" selected="@(Model.KpiCards[i].Color == c)">@c</option>
+                        }
+                    </select>
+                    <button type="submit" form="delCard@(Model.KpiCards[i].Id)" class="btn-danger text-xs"
+                            onclick="return confirm('Supprimer cette carte KPI ?')">✕ Suppr.</button>
+                </div>
+            }
+            <div class="flex justify-end"><button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer les modifications</button></div>
+        </form>
+
+        @* Formulaires de suppression (siblings, référencés via form=) *@
+        @foreach (var card in Model.KpiCards)
+        {
+            <form id="delCard@(card.Id)" asp-action="DeleteKpiCard" method="post" class="hidden">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@card.Id" />
+            </form>
+        }
+
+        <details class="mt-4 pt-3 border-t border-slate-700">
+            <summary class="cursor-pointer text-sm text-cyan-400">➕ Ajouter une nouvelle carte KPI</summary>
+            <form asp-action="AddKpiCard" method="post" class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+                @Html.AntiForgeryToken()
+                <input name="label" placeholder="Libellé" required />
+                <input name="value" placeholder="Valeur" required />
+                <input name="subtitle" placeholder="Sous-titre" class="lg:col-span-2" />
+                <input name="trendBadge" placeholder="Badge tendance" />
+                <select name="color">
+                    @foreach (var c in Enum.GetValues<KpiCardColor>())
+                    { <option value="@((int)c)">@c</option> }
+                </select>
+                <div class="lg:col-span-6 flex justify-end"><button class="btn-primary text-sm">➕ Ajouter</button></div>
+            </form>
+        </details>
+    </section>
+
+    <!-- Gauges & Bars -->
+    <section data-pane="gauges" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <form asp-action="SaveGauges" method="post" class="space-y-3">
+                    @Html.AntiForgeryToken()
+                    <h4 class="font-semibold text-cyan-400 mb-2">Jauges radiales</h4>
+                    @for (int i = 0; i < Model.Gauges.Count; i++)
+                    {
+                        <div class="grid grid-cols-4 gap-2">
+                            <input type="hidden" name="gauges[@i].Id" value="@Model.Gauges[i].Id" />
+                            <input name="gauges[@i].Label" value="@Model.Gauges[i].Label" class="col-span-2" />
+                            <input name="gauges[@i].Value" value="@Model.Gauges[i].Value" type="number" min="0" max="100" />
+                            <button type="submit" form="delGauge@(Model.Gauges[i].Id)" class="btn-danger text-xs"
+                                    onclick="return confirm('Supprimer cette jauge ?')">✕</button>
+                        </div>
+                    }
+                    <button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer jauges</button>
+                </form>
+
+                @foreach (var gauge in Model.Gauges)
+                {
+                    <form id="delGauge@(gauge.Id)" asp-action="DeleteGauge" method="post" class="hidden">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@gauge.Id" />
+                    </form>
+                }
+
+                <details class="mt-4 pt-3 border-t border-slate-700">
+                    <summary class="cursor-pointer text-sm text-cyan-400">➕ Ajouter une jauge</summary>
+                    <form asp-action="AddGauge" method="post" class="mt-3 grid grid-cols-4 gap-2">
+                        @Html.AntiForgeryToken()
+                        <input name="label" placeholder="Libellé" required class="col-span-2" />
+                        <input name="value" type="number" min="0" max="100" value="0" />
+                        <div class="flex justify-end"><button class="btn-primary text-sm">➕</button></div>
+                    </form>
+                </details>
+            </div>
+            <div>
+                <form asp-action="SaveProgressBars" method="post" class="space-y-3">
+                    @Html.AntiForgeryToken()
+                    <h4 class="font-semibold text-cyan-400 mb-2">Barres de progression</h4>
+                    @for (int i = 0; i < Model.ProgressBars.Count; i++)
+                    {
+                        <div class="grid grid-cols-4 gap-2">
+                            <input type="hidden" name="bars[@i].Id" value="@Model.ProgressBars[i].Id" />
+                            <input name="bars[@i].Label" value="@Model.ProgressBars[i].Label" class="col-span-2" />
+                            <input name="bars[@i].Value" value="@Model.ProgressBars[i].Value" type="number" min="0" max="100" />
+                            <button type="submit" form="delBar@(Model.ProgressBars[i].Id)" class="btn-danger text-xs"
+                                    onclick="return confirm('Supprimer cette barre ?')">✕</button>
+                        </div>
+                    }
+                    <button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer barres</button>
+                </form>
+
+                @foreach (var bar in Model.ProgressBars)
+                {
+                    <form id="delBar@(bar.Id)" asp-action="DeleteProgressBar" method="post" class="hidden">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@bar.Id" />
+                    </form>
+                }
+
+                <details class="mt-4 pt-3 border-t border-slate-700">
+                    <summary class="cursor-pointer text-sm text-cyan-400">➕ Ajouter une barre</summary>
+                    <form asp-action="AddProgressBar" method="post" class="mt-3 grid grid-cols-4 gap-2">
+                        @Html.AntiForgeryToken()
+                        <input name="label" placeholder="Libellé" required class="col-span-2" />
+                        <input name="value" type="number" min="0" max="100" value="0" />
+                        <div class="flex justify-end"><button class="btn-primary text-sm">➕</button></div>
+                    </form>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agents -->
+    <section data-pane="agents" class="hidden">
+        <form asp-action="SaveAgents" method="post">
+            @Html.AntiForgeryToken()
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                @for (int i = 0; i < Model.Agents.Count; i++)
+                {
+                    <div class="flex items-center gap-2 border border-slate-700 p-2 rounded">
+                        <input type="hidden" name="agents[@i].Id" value="@Model.Agents[i].Id" />
+                        <input type="hidden" name="agents[@i].Position" value="@Model.Agents[i].Position" />
+                        <span class="mono text-cyan-400 w-8 flex-shrink-0">#@Model.Agents[i].Position</span>
+                        <input name="agents[@i].Name" value="@Model.Agents[i].Name" class="flex-1 min-w-0" />
+                        <label class="flex items-center gap-1 text-xs flex-shrink-0">
+                            <input type="hidden" name="agents[@i].IsPresent" value="false" />
+                            <input type="checkbox" name="agents[@i].IsPresent" value="true" @(Model.Agents[i].IsPresent ? "checked" : "") />
+                            <span>Présent</span>
+                        </label>
+                        <button type="submit" form="delAgent@(Model.Agents[i].Id)" class="btn-danger text-xs flex-shrink-0"
+                                onclick="return confirm('Retirer cette position du tableau de garde ?')">✕</button>
+                    </div>
+                }
+            </div>
+            <div class="flex justify-end mt-4"><button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer</button></div>
+        </form>
+
+        @foreach (var agent in Model.Agents)
+        {
+            <form id="delAgent@(agent.Id)" asp-action="DeleteAgentPosition" method="post" class="hidden">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@agent.Id" />
+            </form>
+        }
+
+        <details class="mt-4 pt-3 border-t border-slate-700">
+            <summary class="cursor-pointer text-sm text-cyan-400">➕ Ajouter une position de garde</summary>
+            <form asp-action="AddAgentPosition" method="post" class="mt-3 flex flex-col sm:flex-row gap-2">
+                @Html.AntiForgeryToken()
+                <input name="name" placeholder="Nom de l'agent" class="flex-1" />
+                <button class="btn-primary text-sm whitespace-nowrap">➕ Ajouter la position</button>
+            </form>
+        </details>
+    </section>
+
+    <!-- Trainings -->
+    <section data-pane="trainings" class="hidden">
+        @{ ViewData["ExerciseType"] = ExerciseType.Training; ViewData["AllowMultiple"] = true; }
+        @await Html.PartialAsync("_ExerciseForm", Model.Trainings)
+    </section>
+
+    <!-- Grand Nature -->
+    <section data-pane="grand" class="hidden">
+        @{
+            ViewData["ExerciseType"] = ExerciseType.GrandNature;
+            ViewData["AllowMultiple"] = false;
+            var grandList = Model.GrandNature is not null ? new List<Exercise> { Model.GrandNature } : new List<Exercise>();
+        }
+        @await Html.PartialAsync("_ExerciseForm", grandList)
+    </section>
+
+    <!-- Crisis -->
+    <section data-pane="crisis" class="hidden">
+        @{ ViewData["ExerciseType"] = ExerciseType.Crisis; ViewData["AllowMultiple"] = true; }
+        @await Html.PartialAsync("_ExerciseForm", Model.CrisisExercises)
+    </section>
+
+    <!-- KPI Table -->
+    <section data-pane="table" class="hidden">
+        <form asp-action="SaveKpiTable" method="post" class="space-y-2">
+            @Html.AntiForgeryToken()
+            <p class="text-xs text-slate-500 sm:hidden mb-2">↔️ Faites défiler horizontalement pour voir toutes les colonnes</p>
+            <div class="table-wrap max-h-[60vh] overflow-y-auto">
+                <table class="w-full text-xs sm:text-sm" style="min-width: 800px">
+                    <thead class="text-xs text-slate-400 sticky top-0 bg-[var(--navy-700)]">
+                        <tr>
+                            <th class="text-left p-2">Catégorie</th>
+                            <th class="text-left p-2">Indicateur</th>
+                            <th class="text-left p-2">Valeur</th>
+                            <th class="text-left p-2">Objectif</th>
+                            <th class="text-left p-2">Seuil</th>
+                            <th class="text-left p-2">Statut</th>
+                            <th class="text-right p-2">Suppr.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.KpiTable.Count; i++)
+                        {
+                            <tr class="border-b border-slate-800">
+                                <td class="p-1"><input type="hidden" name="rows[@i].Id" value="@Model.KpiTable[i].Id" /><input name="rows[@i].Category" value="@Model.KpiTable[i].Category" /></td>
+                                <td class="p-1"><input name="rows[@i].Indicator" value="@Model.KpiTable[i].Indicator" /></td>
+                                <td class="p-1"><input name="rows[@i].CurrentValue" value="@Model.KpiTable[i].CurrentValue" /></td>
+                                <td class="p-1"><input name="rows[@i].Target" value="@Model.KpiTable[i].Target" /></td>
+                                <td class="p-1"><input name="rows[@i].Threshold" value="@Model.KpiTable[i].Threshold" /></td>
+                                <td class="p-1">
+                                    <select name="rows[@i].Status">
+                                        @foreach (var s in Enum.GetValues<KpiStatus>())
+                                        {
+                                            <option value="@((int)s)" selected="@(Model.KpiTable[i].Status == s)">@s</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td class="p-1 text-right">
+                                    <button type="submit" form="delRow@(Model.KpiTable[i].Id)" class="btn-danger text-xs"
+                                            onclick="return confirm('Supprimer cet indicateur ?')">✕</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end pt-3"><button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer les modifications</button></div>
+        </form>
+
+        @foreach (var row in Model.KpiTable)
+        {
+            <form id="delRow@(row.Id)" asp-action="DeleteKpiRow" method="post" class="hidden">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@row.Id" />
+            </form>
+        }
+
+        <details class="mt-4 pt-3 border-t border-slate-700">
+            <summary class="cursor-pointer text-sm text-cyan-400">➕ Ajouter un nouvel indicateur au tableau</summary>
+            <form asp-action="AddKpiRow" method="post" class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+                @Html.AntiForgeryToken()
+                <input name="category" placeholder="Catégorie" required />
+                <input name="indicator" placeholder="Indicateur" required />
+                <input name="currentValue" placeholder="Valeur" />
+                <input name="target" placeholder="Objectif" />
+                <input name="threshold" placeholder="Seuil alerte" />
+                <select name="status">
+                    @foreach (var s in Enum.GetValues<KpiStatus>())
+                    { <option value="@((int)s)">@s</option> }
+                </select>
+                <div class="lg:col-span-6 flex justify-end"><button class="btn-primary text-sm">➕ Ajouter l'indicateur</button></div>
+            </form>
+        </details>
+    </section>
+
+    <!-- Branding / logo -->
+    <section data-pane="branding" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-semibold text-cyan-400 mb-2">Logo actuel</h4>
+                <div class="card p-6 flex items-center justify-center bg-white" style="min-height: 160px">
+                    <img src="@logoUrl?v=@DateTime.Now.Ticks" alt="Logo CIT" class="max-h-32 w-auto" />
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Le logo s'affiche dans l'en-tête, l'écran de connexion et le favicon.</p>
+            </div>
+
+            <form asp-action="UploadLogo" method="post" enctype="multipart/form-data" class="space-y-4">
+                @Html.AntiForgeryToken()
+                <h4 class="font-semibold text-cyan-400 mb-2">Remplacer le logo</h4>
+                <div>
+                    <label class="block text-sm mb-1">Fichier (SVG recommandé, max 2 Mo)</label>
+                    <input type="file" name="logoFile" accept=".svg,.png,.jpg,.jpeg,.webp" class="w-full p-2" required />
+                </div>
+                <p class="text-xs text-slate-400">Formats acceptés : <span class="mono">.svg</span> · <span class="mono">.png</span> · <span class="mono">.jpg</span> · <span class="mono">.webp</span>. Hauteur recommandée : 80–120 px.</p>
+                <button type="submit" class="btn-primary">📤 Téléverser</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Notifications / SMTP -->
+    <section data-pane="notifications" class="hidden">
+        <form asp-action="SaveNotificationSettings" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Notifications.Id" value="@notif.Id" />
+
+            <div class="md:col-span-2">
+                <h4 class="font-semibold text-cyan-400 mb-2">Serveur SMTP</h4>
+                <p class="text-xs text-slate-400 mb-3">Renseigner pour l'envoi automatique des alertes d'exercices.</p>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Serveur SMTP (host)</label>
+                <input name="Notifications.SmtpHost" value="@notif.SmtpHost" placeholder="ex : smtp.office365.com" class="w-full" />
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Port</label>
+                <input name="Notifications.SmtpPort" type="number" value="@notif.SmtpPort" min="1" max="65535" class="w-full" />
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Utilisateur</label>
+                <input name="Notifications.SmtpUsername" value="@notif.SmtpUsername" autocomplete="off" class="w-full" />
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Mot de passe @(string.IsNullOrEmpty(notif.SmtpPassword) ? "" : "(laisser vide pour conserver l'actuel)")</label>
+                <input name="Notifications.SmtpPassword" type="password" value="" autocomplete="new-password" class="w-full" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="hidden" name="Notifications.UseStartTls" value="false" />
+                    <input type="checkbox" name="Notifications.UseStartTls" value="true" @(notif.UseStartTls ? "checked" : "") />
+                    <span>Utiliser STARTTLS (recommandé pour port 587)</span>
+                </label>
+            </div>
+
+            <div class="md:col-span-2 mt-2">
+                <h4 class="font-semibold text-cyan-400 mb-2">Expéditeur</h4>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Adresse expéditeur</label>
+                <input name="Notifications.FromAddress" value="@notif.FromAddress" class="w-full" />
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Nom affiché</label>
+                <input name="Notifications.FromName" value="@notif.FromName" class="w-full" />
+            </div>
+
+            <div class="md:col-span-2 mt-2">
+                <h4 class="font-semibold text-cyan-400 mb-2">Destinataires & déclencheurs</h4>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm mb-1">Adresses email (séparées par ; ou retour à la ligne)</label>
+                <textarea name="Notifications.Recipients" rows="3" class="w-full mono text-sm" placeholder="surete@cit.ci; direction@cit.ci">@notif.Recipients</textarea>
+            </div>
+            <div>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="hidden" name="Notifications.EnableD30Alerts" value="false" />
+                    <input type="checkbox" name="Notifications.EnableD30Alerts" value="true" @(notif.EnableD30Alerts ? "checked" : "") />
+                    <span>Alertes <strong class="text-amber-400">J-30</strong> avant exercice</span>
+                </label>
+            </div>
+            <div>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="hidden" name="Notifications.EnableD7Alerts" value="false" />
+                    <input type="checkbox" name="Notifications.EnableD7Alerts" value="true" @(notif.EnableD7Alerts ? "checked" : "") />
+                    <span>Alertes <strong class="text-red-400">J-7</strong> avant exercice</span>
+                </label>
+            </div>
+
+            <div class="md:col-span-2 flex justify-end mt-2">
+                <button type="submit" class="btn-primary">✓ Enregistrer la configuration</button>
+            </div>
+        </form>
+
+        <hr class="border-slate-700 my-6" />
+
+        <form asp-action="SendTestEmail" method="post" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+            @Html.AntiForgeryToken()
+            <div class="flex-1">
+                <label class="block text-sm mb-1">Tester l'envoi (laisser vide pour envoyer aux destinataires configurés)</label>
+                <input name="testRecipient" type="email" placeholder="test@example.com" />
+            </div>
+            <button type="submit" class="btn-secondary w-full sm:w-auto whitespace-nowrap">📨 Envoyer email de test</button>
+        </form>
+        <p class="text-xs text-slate-500 mt-2">L'envoi est journalisé dans le journal d'audit. Job Quartz d'alertes exécuté chaque jour à 08:00.</p>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('[data-pane]').forEach(p => p.classList.add('hidden'));
+                btn.classList.add('active');
+                document.querySelector('[data-pane="' + btn.dataset.tab + '"]').classList.remove('hidden');
+            });
+        });
+    </script>
+}

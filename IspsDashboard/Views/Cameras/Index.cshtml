@@ -1,0 +1,44 @@
+@{
+    ViewData["Title"] = "Caméras CCTV";
+    var cameras = ViewBag.Cameras as IReadOnlyList<Camera> ?? new List<Camera>();
+    double availability = ViewBag.Availability as double? ?? 0;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    string StatusClass(CameraStatus s) => s switch
+    {
+        CameraStatus.Operationnelle => "badge-vert",
+        CameraStatus.EnMaintenance => "badge-ambre",
+        CameraStatus.Defaillante => "badge-rouge",
+        _ => "badge-rouge"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">🎥 Inventaire caméras CCTV</h1>
+        <p class="text-xs sm:text-sm text-slate-400">Disponibilité globale : <span class="mono font-bold @(availability >= 98 ? "text-emerald-400" : availability >= 90 ? "text-amber-400" : "text-red-400")">@availability%</span></p>
+    </div>
+    @if (canEdit)
+    {
+        <a asp-action="Create" class="btn-primary text-center w-full sm:w-auto">+ Ajouter une caméra</a>
+    }
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    @foreach (var c in cameras)
+    {
+        <a asp-action="Details" asp-route-id="@c.Id" class="card p-4 hover:border-cyan-400 transition block">
+            <div class="flex items-center justify-between mb-2">
+                <span class="mono text-cyan-400 text-sm">@c.Code</span>
+                <span class="@StatusClass(c.Status) text-xs px-2 py-0.5 rounded">@c.Status</span>
+            </div>
+            <div class="text-sm font-medium text-white">@c.Label</div>
+            <div class="text-xs text-slate-500 mt-1">@c.Zone · @c.Type</div>
+            @if (c.LastCheckedAt is not null)
+            {
+                <div class="text-[11px] text-slate-500 mono mt-2 border-t border-slate-700 pt-2">
+                    Dernière vérif. : @c.LastCheckedAt.Value.ToLocalTime().ToString("dd/MM/yyyy")
+                </div>
+            }
+        </a>
+    }
+</div>

@@ -1,0 +1,129 @@
+@model Incident
+@{
+    ViewData["Title"] = $"Incident {Model.Reference}";
+    string SeverityClass(IncidentSeverity s) => s switch
+    {
+        IncidentSeverity.Mineur => "badge-vert",
+        IncidentSeverity.Modere => "badge-ambre",
+        _ => "badge-rouge"
+    };
+    string StatusClass(IncidentStatus s) => s switch
+    {
+        IncidentStatus.Ouvert => "badge-rouge",
+        IncidentStatus.EnInvestigation => "badge-ambre",
+        _ => "badge-vert"
+    };
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <div class="text-xs text-slate-400 uppercase tracking-wider">Référence</div>
+        <div class="flex items-center gap-3 mt-1 flex-wrap">
+            <span class="mono text-2xl text-cyan-400 font-bold">@Model.Reference</span>
+            <span class="@SeverityClass(Model.Severity) px-2 py-1 rounded text-xs">@Model.Severity</span>
+            <span class="@StatusClass(Model.Status) px-2 py-1 rounded text-xs">@Model.Status</span>
+        </div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.Title</h1>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "Incidents",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Déplacer cet incident vers la corbeille ?"
+            })
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div class="card p-4 sm:p-5 lg:col-span-2 space-y-4">
+        <section>
+            <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Description</h3>
+            <p class="whitespace-pre-wrap text-slate-200">@Model.Description</p>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ActionsTaken))
+        {
+            <section>
+                <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Mesures prises</h3>
+                <p class="whitespace-pre-wrap text-slate-200">@Model.ActionsTaken</p>
+            </section>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.LessonsLearned))
+        {
+            <section>
+                <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Enseignements / REX</h3>
+                <p class="whitespace-pre-wrap text-slate-200">@Model.LessonsLearned</p>
+            </section>
+        }
+
+        @if (Model.Attachments.Count > 0)
+        {
+            <section>
+                <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Pièces jointes (@Model.Attachments.Count)</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    @foreach (var a in Model.Attachments)
+                    {
+                        var isImg = a.ContentType.StartsWith("image/");
+                        <a href="@a.StoredPath" target="_blank" class="border border-slate-700 rounded p-2 hover:border-cyan-400 transition block">
+                            @if (isImg)
+                            {
+                                <img src="@a.StoredPath" alt="@a.FileName" class="w-full h-24 object-cover rounded mb-1" />
+                            }
+                            else
+                            {
+                                <div class="w-full h-24 flex items-center justify-center text-4xl text-slate-600">📄</div>
+                            }
+                            <div class="text-xs text-slate-300 truncate">@a.FileName</div>
+                            <div class="text-[10px] text-slate-500 mono">@((a.SizeBytes / 1024).ToString("N0")) Ko</div>
+                        </a>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+
+    <aside class="card p-4 sm:p-5 space-y-3">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Informations</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Catégorie</dt><dd class="text-slate-200">@Model.Category</dd></div>
+            <div><dt class="text-slate-500 text-xs">Survenu le</dt><dd class="text-slate-200 mono">@Model.OccurredAt.ToString("dd/MM/yyyy HH:mm")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Zone</dt><dd class="text-slate-200">@(string.IsNullOrEmpty(Model.Zone) ? "—" : Model.Zone)</dd></div>
+            <div><dt class="text-slate-500 text-xs">Déclaré par</dt><dd class="text-slate-200">@(string.IsNullOrEmpty(Model.ReportedBy) ? "—" : Model.ReportedBy)</dd></div>
+            <div><dt class="text-slate-500 text-xs">Enquêteur</dt><dd class="text-slate-200">@(string.IsNullOrEmpty(Model.Investigator) ? "—" : Model.Investigator)</dd></div>
+            <div><dt class="text-slate-500 text-xs">Créé le</dt><dd class="text-slate-400 mono text-xs">@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd></div>
+            @if (Model.ClosedAt is not null)
+            {
+                <div><dt class="text-slate-500 text-xs">Clos le</dt><dd class="text-emerald-400 mono text-xs">@Model.ClosedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd></div>
+            }
+        </dl>
+
+        @if (canEdit && Model.Status != IncidentStatus.Clos)
+        {
+            <div class="border-t border-slate-700 pt-3 space-y-2">
+                <h4 class="text-xs uppercase text-slate-400">Workflow</h4>
+                @if (Model.Status == IncidentStatus.Ouvert)
+                {
+                    <form asp-action="ChangeStatus" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="newStatus" value="@((int)IncidentStatus.EnInvestigation)" />
+                        <button type="submit" class="btn-secondary w-full text-sm">→ Lancer l'investigation</button>
+                    </form>
+                }
+                <form asp-action="ChangeStatus" asp-route-id="@Model.Id" method="post"
+                      data-confirm="Clore définitivement cet incident ?">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="newStatus" value="@((int)IncidentStatus.Clos)" />
+                    <button type="submit" class="btn-primary w-full text-sm">✓ Clore l'incident</button>
+                </form>
+            </div>
+        }
+    </aside>
+</div>

@@ -1,0 +1,69 @@
+@model SecurityDocument
+@{
+    ViewData["Title"] = Model.Title;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    bool isAdmin = User.IsInRole(DataSeeder.AdminRole);
+    string StatusClass(DocumentStatus s) => s switch
+    {
+        DocumentStatus.EnVigueur => "badge-vert",
+        DocumentStatus.Brouillon => "badge-ambre",
+        _ => "badge-bleu"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <div class="text-xs text-slate-400 uppercase tracking-wider">@Model.Category</div>
+        <div class="flex items-center gap-3 mt-1 flex-wrap">
+            <span class="@StatusClass(Model.Status) text-xs px-2 py-1 rounded">@Model.Status</span>
+            <span class="badge-bleu text-xs px-2 py-1 rounded">v@Model.Version</span>
+            @if (Model.IsConfidential) { <span class="text-xs text-slate-400">🔒 Confidentiel</span> }
+        </div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.Title</h1>
+    </div>
+    <div class="flex gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (!string.IsNullOrEmpty(Model.FilePath))
+        {
+            <a href="@Model.FilePath" target="_blank" class="btn-secondary text-sm">📥 Ouvrir</a>
+        }
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+        }
+        @if (isAdmin)
+        {
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "Documents",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Supprimer définitivement ce document ?"
+            })
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-5 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Informations</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Auteur / Responsable</dt><dd class="text-slate-200">@Model.Owner</dd></div>
+            <div><dt class="text-slate-500 text-xs">Mise en vigueur</dt><dd class="text-slate-200 mono">@(Model.EffectiveDate?.ToString("dd/MM/yyyy") ?? "—")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Prochaine révision</dt><dd class="text-slate-200 mono">@(Model.NextReviewDate?.ToString("dd/MM/yyyy") ?? "—")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Fichier</dt><dd class="text-slate-200">@(string.IsNullOrEmpty(Model.FileName) ? "—" : $"{Model.FileName} ({Model.FileSizeBytes / 1024} Ko)")</dd></div>
+        </dl>
+    </div>
+    <div class="card p-5 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Description</h3>
+        <p class="text-sm text-slate-200 whitespace-pre-wrap">@(string.IsNullOrEmpty(Model.Description) ? "—" : Model.Description)</p>
+        @if (canEdit && Model.Status != DocumentStatus.EnVigueur)
+        {
+            <form asp-action="ChangeStatus" method="post" class="pt-3 border-t border-slate-700 mt-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="@((int)DocumentStatus.EnVigueur)" />
+                <button class="btn-primary text-xs">Mettre en vigueur</button>
+            </form>
+        }
+    </div>
+</div>

@@ -1,0 +1,72 @@
+@using IspsDashboard.Services.Interfaces
+@model AccessPass
+@{
+    ViewData["Title"] = Model.Reference;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    var svc = ViewBag.Service as IAccessPassService;
+    var state = svc?.GetState(Model) ?? AccessPassState.Valide;
+    string StateClass(AccessPassState s) => s switch
+    {
+        AccessPassState.Valide => "badge-vert",
+        AccessPassState.Expire => "badge-rouge",
+        _ => "badge-ambre"
+    };
+    string StateLabel(AccessPassState s) => s switch
+    {
+        AccessPassState.Valide => "Valide",
+        AccessPassState.Expire => "Expiré",
+        _ => "Révoqué"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <div class="text-xs text-slate-400 uppercase tracking-wider">Laissez-passer</div>
+        <div class="flex items-center gap-3 mt-1 flex-wrap">
+            <span class="mono text-2xl text-cyan-400 font-bold">@Model.Reference</span>
+            <span class="@StateClass(state) text-xs px-2 py-1 rounded">@StateLabel(state)</span>
+            <span class="badge-bleu text-xs px-2 py-1 rounded">@Model.Type</span>
+        </div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.FullName <span class="text-sm text-slate-500">@Model.Company</span></h1>
+    </div>
+    <div class="flex gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (canEdit)
+        {
+            <a asp-action="Badge" asp-route-id="@Model.Id" target="_blank" class="btn-secondary text-sm">🪪 Badge PDF</a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "AccessPass",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Déplacer ce laissez-passer vers la corbeille ?"
+            })
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-5 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Titulaire</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Contact</dt><dd class="text-slate-200 mono">@Model.Contact</dd></div>
+            <div><dt class="text-slate-500 text-xs">Matricule</dt><dd class="text-slate-200 mono">@Model.Matricule</dd></div>
+            <div><dt class="text-slate-500 text-xs">Email</dt><dd class="text-slate-200">@Model.Email</dd></div>
+            <div><dt class="text-slate-500 text-xs">Immatriculation véhicule</dt><dd class="text-slate-200 mono">@Model.Plate</dd></div>
+        </dl>
+    </div>
+    <div class="card p-5 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Validité</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Édition</dt><dd class="text-slate-200 mono">@Model.IssueDate.ToString("dd/MM/yyyy")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Fin de validité</dt><dd class="text-slate-200 mono">@Model.EndDate.ToString("dd/MM/yyyy")</dd></div>
+            <div><dt class="text-slate-500 text-xs">Délivré par</dt><dd class="text-slate-200">@Model.IssuedBy</dd></div>
+        </dl>
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="border-t border-slate-700 pt-3 mt-3">
+                <p class="text-sm text-slate-300 whitespace-pre-wrap">@Model.Notes</p>
+            </div>
+        }
+    </div>
+</div>

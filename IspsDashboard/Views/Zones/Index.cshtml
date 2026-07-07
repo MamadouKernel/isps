@@ -1,0 +1,52 @@
+@model IReadOnlyList<RestrictedZone>
+@{
+    ViewData["Title"] = "Zones à accès restreint";
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    string LevelClass(ZoneAccessLevel l) => l switch
+    {
+        ZoneAccessLevel.Sensible => "badge-rouge",
+        ZoneAccessLevel.Restreint => "badge-ambre",
+        ZoneAccessLevel.Controle => "badge-bleu",
+        _ => "badge-vert"
+    };
+    string StatusClass(ZoneStatus s) => s switch
+    {
+        ZoneStatus.Active => "badge-vert",
+        ZoneStatus.Verrouillee => "badge-rouge",
+        _ => "badge-ambre"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">🚧 Zones à accès restreint</h1>
+        <p class="text-xs sm:text-sm text-slate-400">Secteurs sensibles identifiés et protégés — ISPS Part A §16.3 / Part B §16.21</p>
+    </div>
+    @if (canEdit)
+    {
+        <a asp-action="Create" class="btn-primary text-center w-full sm:w-auto">+ Déclarer une zone</a>
+    }
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    @foreach (var z in Model)
+    {
+        <a asp-action="Details" asp-route-id="@z.Id" class="card p-4 hover:border-cyan-400 transition block">
+            <div class="flex items-center justify-between mb-2">
+                <span class="mono text-cyan-400 text-sm">@z.Code</span>
+                <span class="@StatusClass(z.Status) text-[10px] px-2 py-0.5 rounded">@z.Status</span>
+            </div>
+            <div class="text-sm font-semibold text-white">@z.Name</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+                <span class="@LevelClass(z.AccessLevel) text-[10px] px-2 py-0.5 rounded">@z.AccessLevel</span>
+                @if (z.RequiresEscort) { <span class="badge-rouge text-[10px] px-2 py-0.5 rounded">Escorte</span> }
+                @if (z.RequiresClearance) { <span class="badge-ambre text-[10px] px-2 py-0.5 rounded">Habilitation</span> }
+                @if (z.CctvMonitored) { <span class="badge-bleu text-[10px] px-2 py-0.5 rounded">🎥 CCTV</span> }
+            </div>
+            @if (!string.IsNullOrEmpty(z.ZoneManager))
+            {
+                <div class="text-[11px] text-slate-500 mt-2 border-t border-slate-700 pt-2">Responsable : @z.ZoneManager</div>
+            }
+        </a>
+    }
+</div>

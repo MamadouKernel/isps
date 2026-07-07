@@ -1,0 +1,109 @@
+@model IncidentListViewModel
+@{
+    ViewData["Title"] = "Registre des incidents";
+    string SeverityClass(IncidentSeverity s) => s switch
+    {
+        IncidentSeverity.Mineur => "badge-vert",
+        IncidentSeverity.Modere => "badge-ambre",
+        IncidentSeverity.Majeur => "badge-rouge",
+        _ => "badge-rouge"
+    };
+    string StatusClass(IncidentStatus s) => s switch
+    {
+        IncidentStatus.Ouvert => "badge-rouge",
+        IncidentStatus.EnInvestigation => "badge-ambre",
+        _ => "badge-vert"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">🚨 Registre des incidents</h1>
+        <p class="text-xs sm:text-sm text-slate-400">Déclaration, investigation et clôture des incidents de sûreté</p>
+    </div>
+    @if (User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole))
+    {
+        <a asp-action="Create" class="btn-primary text-center w-full sm:w-auto">+ Déclarer un incident</a>
+    }
+</div>
+
+<!-- KPI counters -->
+<div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="card p-4">
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Ouverts</div>
+        <div class="text-3xl font-bold mono text-red-400">@Model.TotalOpen</div>
+    </div>
+    <div class="card p-4">
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">En investigation</div>
+        <div class="text-3xl font-bold mono text-amber-400">@Model.TotalInvestigation</div>
+    </div>
+    <div class="card p-4">
+        <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Clos</div>
+        <div class="text-3xl font-bold mono text-emerald-400">@Model.TotalClosed</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="card p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <input name="Query" value="@Model.Criteria.Query" placeholder="🔍 Recherche (titre, référence, zone…)" class="lg:col-span-2" />
+    <select name="Status">
+        <option value="">— Tous les statuts —</option>
+        @foreach (var s in Enum.GetValues<IncidentStatus>())
+        {
+            <option value="@s" selected="@(Model.Criteria.Status == s)">@s</option>
+        }
+    </select>
+    <select name="Severity">
+        <option value="">— Toutes sévérités —</option>
+        @foreach (var s in Enum.GetValues<IncidentSeverity>())
+        {
+            <option value="@s" selected="@(Model.Criteria.Severity == s)">@s</option>
+        }
+    </select>
+    <button type="submit" class="btn-primary">Filtrer</button>
+</form>
+
+<div class="flex justify-end gap-2 mb-3">
+    <a asp-action="ExportExcel" asp-route-Query="@Model.Criteria.Query" asp-route-Status="@Model.Criteria.Status" asp-route-Severity="@Model.Criteria.Severity" class="btn-secondary text-xs">📊 Excel</a>
+    <a asp-action="ExportPdf" asp-route-Query="@Model.Criteria.Query" asp-route-Status="@Model.Criteria.Status" asp-route-Severity="@Model.Criteria.Severity" target="_blank" class="btn-secondary text-xs">📄 PDF</a>
+</div>
+
+<!-- Liste -->
+<div class="card p-3 sm:p-4">
+    @if (Model.Incidents.Count == 0)
+    {
+        <p class="text-center text-slate-400 py-8">Aucun incident ne correspond aux critères.</p>
+    }
+    else
+    {
+        <p class="text-xs text-slate-500 sm:hidden mb-2">↔️ Faites défiler horizontalement</p>
+        <div class="table-wrap">
+            <table class="w-full text-xs sm:text-sm">
+                <thead class="text-xs uppercase text-slate-400 border-b border-slate-700">
+                    <tr>
+                        <th class="text-left p-2 whitespace-nowrap">Référence</th>
+                        <th class="text-left p-2 whitespace-nowrap">Survenue</th>
+                        <th class="text-left p-2">Titre</th>
+                        <th class="text-left p-2">Zone</th>
+                        <th class="text-center p-2">Sévérité</th>
+                        <th class="text-center p-2">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in Model.Incidents)
+                    {
+                        <tr class="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer"
+                            onclick="window.location='@Url.Action("Details", new { id = i.Id })'">
+                            <td class="p-2 mono text-cyan-400 whitespace-nowrap">@i.Reference</td>
+                            <td class="p-2 mono text-slate-400 whitespace-nowrap">@i.OccurredAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="p-2 text-slate-200">@i.Title</td>
+                            <td class="p-2 text-slate-400">@i.Zone</td>
+                            <td class="p-2 text-center"><span class="@SeverityClass(i.Severity) px-2 py-0.5 rounded text-xs whitespace-nowrap">@i.Severity</span></td>
+                            <td class="p-2 text-center"><span class="@StatusClass(i.Status) px-2 py-0.5 rounded text-xs whitespace-nowrap">@i.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

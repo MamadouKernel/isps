@@ -1,0 +1,148 @@
+@{
+    ViewData["Title"] = "Niveau MARSEC";
+    int current = ViewBag.CurrentLevel as int? ?? 1;
+    var history = ViewBag.History as IReadOnlyList<MarsecLevelChange> ?? new List<MarsecLevelChange>();
+    var template1 = ViewBag.Template1 as IReadOnlyList<string> ?? new List<string>();
+    var template2 = ViewBag.Template2 as IReadOnlyList<string> ?? new List<string>();
+    var template3 = ViewBag.Template3 as IReadOnlyList<string> ?? new List<string>();
+    string LevelClass(int l) => l switch { 1 => "badge-vert", 2 => "badge-ambre", _ => "badge-rouge" };
+    string LevelLabel(int l) => l switch { 1 => "Normal", 2 => "Renforcé", _ => "Exceptionnel" };
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+}
+
+<div class="mb-5">
+    <h1 class="text-xl sm:text-2xl font-bold text-white">⚓ Niveau MARSEC (ISPS)</h1>
+    <p class="text-xs sm:text-sm text-slate-400">Changement de niveau formel avec checklist d'actions obligatoires</p>
+</div>
+
+<div class="card p-5 mb-5 text-center">
+    <div class="text-xs uppercase text-slate-400 tracking-wider mb-2">Niveau actuel</div>
+    <div class="inline-block @LevelClass(current) px-6 py-3 rounded-xl">
+        <div class="text-4xl font-bold">N° @current</div>
+        <div class="text-xs uppercase mt-1">@LevelLabel(current)</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    @if (canEdit)
+    {
+    <section class="card p-5">
+        <h3 class="font-semibold text-cyan-400 text-sm uppercase mb-3">🔄 Changer de niveau</h3>
+        <form method="post" asp-action="RequestChange" class="space-y-3">
+            @Html.AntiForgeryToken()
+            <div>
+                <label class="block text-sm mb-1">Nouveau niveau</label>
+                <select name="newLevel" class="w-full">
+                    <option value="1" selected="@(current == 1)">Niveau 1 — Normal</option>
+                    <option value="2" selected="@(current == 2)">Niveau 2 — Renforcé</option>
+                    <option value="3" selected="@(current == 3)">Niveau 3 — Exceptionnel</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Motif (obligatoire — tracé pour audit)</label>
+                <textarea name="reason" rows="3" required placeholder="Ex: Renseignement d'augmentation de menace transmis par le PAA"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Source de la décision</label>
+                <input name="decisionSource" placeholder="Ex: Directive PAA #2026-018, Bulletin renseignement, etc." />
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Décidé par</label>
+                <input name="decidedBy" placeholder="Nom du décideur (PFSO, CSO, Direction)" required />
+            </div>
+            <button type="submit" class="btn-primary w-full">✓ Appliquer le changement</button>
+        </form>
+    </section>
+    }
+
+    <section class="card p-5">
+        <h3 class="font-semibold text-cyan-400 text-sm uppercase mb-3">📋 Actions standards par niveau (PFSP)</h3>
+        <div class="space-y-3 text-sm max-h-[500px] overflow-y-auto">
+            <div>
+                <div class="badge-vert inline-block px-2 py-0.5 rounded text-xs mb-2">Niveau 1 — Normal</div>
+                <ul class="space-y-1 text-slate-300 list-disc list-inside text-xs">
+                    @foreach (var a in template1) { <li>@a</li> }
+                </ul>
+            </div>
+            <div>
+                <div class="badge-ambre inline-block px-2 py-0.5 rounded text-xs mb-2">Niveau 2 — Renforcé</div>
+                <ul class="space-y-1 text-slate-300 list-disc list-inside text-xs">
+                    @foreach (var a in template2) { <li>@a</li> }
+                </ul>
+            </div>
+            <div>
+                <div class="badge-rouge inline-block px-2 py-0.5 rounded text-xs mb-2">Niveau 3 — Exceptionnel</div>
+                <ul class="space-y-1 text-slate-300 list-disc list-inside text-xs">
+                    @foreach (var a in template3) { <li>@a</li> }
+                </ul>
+            </div>
+        </div>
+    </section>
+</div>
+
+<section class="card p-5 mt-6">
+    <h3 class="font-semibold text-cyan-400 text-sm uppercase mb-3">📜 Historique des changements (@history.Count)</h3>
+    @if (history.Count == 0)
+    {
+        <p class="text-slate-400 text-sm">Aucun changement enregistré.</p>
+    }
+    else
+    {
+        <div class="space-y-3 max-h-[600px] overflow-y-auto">
+            @foreach (var ch in history)
+            {
+                var completed = ch.ChecklistItems.Count(i => i.Completed);
+                var total = ch.ChecklistItems.Count;
+                <details class="border border-slate-700 rounded p-3">
+                    <summary class="cursor-pointer flex justify-between items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="@LevelClass(ch.FromLevel) px-2 py-0.5 rounded text-xs">N°@ch.FromLevel</span>
+                            <span class="text-slate-500">→</span>
+                            <span class="@LevelClass(ch.ToLevel) px-2 py-0.5 rounded text-xs">N°@ch.ToLevel</span>
+                            <span class="text-sm text-slate-200 ml-2">@ch.DecidedBy</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs mono text-slate-500">@ch.ChangedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            <span class="badge-bleu px-2 py-0.5 rounded text-xs">@completed/@total actions</span>
+                        </div>
+                    </summary>
+                    <div class="mt-3 pt-3 border-t border-slate-700 space-y-2">
+                        <p class="text-sm text-slate-300"><strong class="text-slate-500">Motif :</strong> @ch.Reason</p>
+                        @if (!string.IsNullOrEmpty(ch.DecisionSource))
+                        {
+                            <p class="text-xs text-slate-400">Source : @ch.DecisionSource</p>
+                        }
+                        <div class="text-xs uppercase text-cyan-400 mt-3 mb-2">Checklist d'actions</div>
+                        @foreach (var item in ch.ChecklistItems)
+                        {
+                            <div class="flex items-start gap-2 text-sm">
+                                @if (item.Completed)
+                                {
+                                    <span class="text-emerald-400">✓</span>
+                                    <div class="flex-1">
+                                        <span class="text-slate-400 line-through">@item.Action</span>
+                                        <div class="text-[11px] text-slate-500">@item.CompletedBy · @item.CompletedAt?.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                                    </div>
+                                }
+                                else if (canEdit)
+                                {
+                                    <form method="post" asp-action="CompleteItem" class="flex items-start gap-2 w-full">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="itemId" value="@item.Id" />
+                                        <button type="submit" class="text-slate-500 hover:text-emerald-400 text-lg leading-none" title="Marquer comme fait">○</button>
+                                        <span class="text-slate-200 flex-1">@item.Action</span>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-500">○</span>
+                                    <span class="text-slate-200 flex-1">@item.Action</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </details>
+            }
+        </div>
+    }
+</section>

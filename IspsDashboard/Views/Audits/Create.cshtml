@@ -1,0 +1,26 @@
+@model SecurityAudit
+@{
+    ViewData["Title"] = "Planifier un audit";
+}
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">🔍 Planifier un audit de sûreté</h1></div>
+
+<form asp-action="Create" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2"><label asp-for="Title" class="block text-sm mb-1"></label><input asp-for="Title" required placeholder="Audit ISPS annuel 2026" /></div>
+        <div><label asp-for="Type" class="block text-sm mb-1"></label><select asp-for="Type" asp-items="Html.GetEnumSelectList<AuditType>()"></select></div>
+        <div><label asp-for="ScheduledDate" class="block text-sm mb-1"></label><input asp-for="ScheduledDate" type="date" required /></div>
+        <div><label asp-for="Auditor" class="block text-sm mb-1"></label><input asp-for="Auditor" /></div>
+        <div><label asp-for="Scope" class="block text-sm mb-1"></label><input asp-for="Scope" placeholder="Ensemble du terminal" /></div>
+    </div>
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="seedChecklist" value="true" checked />
+        <input type="hidden" name="seedChecklist" value="false" />
+        <span>Pré-remplir avec la checklist ISPS standard (20 points de contrôle)</span>
+    </label>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Index" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Créer l'audit</button>
+    </div>
+</form>

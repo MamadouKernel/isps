@@ -1,0 +1,9 @@
+@model IspsDashboard.Models.ViewModels.DeleteButtonModel
+<form asp-controller="@Model.Controller" asp-action="@Model.Action" method="post" class="@Model.FormClass" data-confirm="@Model.ConfirmMessage">
+    @Html.AntiForgeryToken()
+    @foreach (var kv in Model.RouteValues)
+    {
+        <input type="hidden" name="@kv.Key" value="@kv.Value" />
+    }
+    <button type="submit" class="@Model.ButtonClass">@Model.ButtonLabel</button>
+</form>

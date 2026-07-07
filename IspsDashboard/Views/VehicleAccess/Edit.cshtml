@@ -1,0 +1,29 @@
+@model VehicleAccess
+@{ ViewData["Title"] = "Modifier le mouvement"; }
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Mouvement @Model.Reference</h1></div>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label asp-for="Plate" class="block text-sm mb-1"></label><input asp-for="Plate" required /></div>
+        <div><label asp-for="Type" class="block text-sm mb-1"></label><select asp-for="Type" asp-items="Html.GetEnumSelectList<VehicleType>()"></select></div>
+        <div><label asp-for="Direction" class="block text-sm mb-1"></label><select asp-for="Direction" asp-items="Html.GetEnumSelectList<AccessDirection>()"></select></div>
+        <div><label asp-for="Result" class="block text-sm mb-1"></label><select asp-for="Result" asp-items="Html.GetEnumSelectList<AccessControlResult>()"></select></div>
+        <div><label asp-for="OccurredAt" class="block text-sm mb-1"></label><input asp-for="OccurredAt" type="datetime-local" /></div>
+        <div><label asp-for="Gate" class="block text-sm mb-1"></label><input asp-for="Gate" /></div>
+        <div><label asp-for="DriverName" class="block text-sm mb-1"></label><input asp-for="DriverName" /></div>
+        <div><label asp-for="Carrier" class="block text-sm mb-1"></label><input asp-for="Carrier" /></div>
+        <div><label asp-for="ContainerNumber" class="block text-sm mb-1"></label><input asp-for="ContainerNumber" /></div>
+        <div><label asp-for="SealNumber" class="block text-sm mb-1"></label><input asp-for="SealNumber" /></div>
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="SealVerified" value="true" @(Model.SealVerified ? "checked" : "") /><input type="hidden" name="SealVerified" value="false" /><span>Scellé conforme</span></label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="Searched" value="true" @(Model.Searched ? "checked" : "") /><input type="hidden" name="Searched" value="false" /><span>Fouille</span></label>
+        </div>
+        <div class="md:col-span-2"><label asp-for="Notes" class="block text-sm mb-1"></label><textarea asp-for="Notes" rows="2"></textarea></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Index" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

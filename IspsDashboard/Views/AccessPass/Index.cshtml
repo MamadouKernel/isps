@@ -1,0 +1,142 @@
+@using IspsDashboard.Services.Interfaces
+@{
+    ViewData["Title"] = "Laissez-passer";
+    var passes = ViewBag.Passes as IReadOnlyList<AccessPass> ?? new List<AccessPass>();
+    var svc = ViewBag.Service as IAccessPassService;
+    var activeType = ViewBag.Type as AccessPassType?;
+    var activeCat = ViewBag.Category as AccessPassCategory?;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    int countActive = ViewBag.CountActive as int? ?? 0;
+    int countExpiring = ViewBag.CountExpiring as int? ?? 0;
+
+    string TypeLabel(AccessPassType t) => t switch
+    {
+        AccessPassType.Journalier => "Journalier",
+        AccessPassType.Trimestriel => "Trimestriel",
+        _ => "Annuel"
+    };
+    string StateClass(AccessPassState s) => s switch
+    {
+        AccessPassState.Valide => "badge-vert",
+        AccessPassState.Expire => "badge-rouge",
+        _ => "badge-ambre"
+    };
+    string StateLabel(AccessPassState s) => s switch
+    {
+        AccessPassState.Valide => "Valide",
+        AccessPassState.Expire => "Expiré",
+        _ => "Révoqué"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">🪪 Laissez-passer d'accès</h1>
+        <p class="text-xs sm:text-sm text-slate-400">Délivrance et suivi des accès journaliers, trimestriels et annuels (personnes & véhicules)</p>
+    </div>
+    @if (canEdit)
+    {
+        <div class="flex flex-wrap gap-2">
+            <a asp-action="Create" asp-route-type="@((int)AccessPassType.Journalier)" class="btn-secondary text-sm">+ Journalier</a>
+            <a asp-action="Create" asp-route-type="@((int)AccessPassType.Trimestriel)" class="btn-secondary text-sm">+ Trimestriel</a>
+            <a asp-action="Create" asp-route-type="@((int)AccessPassType.Annuel)" class="btn-secondary text-sm">+ Annuel</a>
+            <a asp-action="Create" asp-route-category="@((int)AccessPassCategory.Vehicule)" class="btn-primary text-sm">+ Véhicule</a>
+        </div>
+    }
+</div>
+
+<div class="flex justify-end gap-2 mb-3">
+    <a asp-action="ExportExcel" asp-route-type="@ViewBag.Type" asp-route-category="@ViewBag.Category" asp-route-query="@ViewBag.Query" class="btn-secondary text-xs">📊 Excel</a>
+    <a asp-action="ExportPdf" asp-route-type="@ViewBag.Type" asp-route-category="@ViewBag.Category" asp-route-query="@ViewBag.Query" target="_blank" class="btn-secondary text-xs">📄 PDF</a>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    <div class="card p-3 text-center"><div class="text-[11px] uppercase text-slate-400">Valides</div><div class="text-2xl font-bold mono text-emerald-400">@countActive</div></div>
+    <div class="card p-3 text-center"><div class="text-[11px] uppercase text-slate-400">Expirent (7 j)</div><div class="text-2xl font-bold mono text-amber-400">@countExpiring</div></div>
+    <div class="card p-3 text-center"><div class="text-[11px] uppercase text-slate-400">Total affichés</div><div class="text-2xl font-bold mono text-cyan-400">@passes.Count</div></div>
+    <div class="card p-3 text-center"><div class="text-[11px] uppercase text-slate-400">Véhicules</div><div class="text-2xl font-bold mono text-white">@passes.Count(p => p.Category == AccessPassCategory.Vehicule)</div></div>
+</div>
+
+<!-- Filtres par type (liste déroulante demandée) -->
+<form method="get" class="card p-4 mb-5 grid grid-cols-1 sm:grid-cols-4 gap-3">
+    <select name="type">
+        <option value="">— Tous les types —</option>
+        @foreach (var t in Enum.GetValues<AccessPassType>())
+        {
+            <option value="@((int)t)" selected="@(activeType == t)">Accès @TypeLabel(t).ToLower()</option>
+        }
+    </select>
+    <select name="category">
+        <option value="">— Personnes & véhicules —</option>
+        <option value="@((int)AccessPassCategory.Personne)" selected="@(activeCat == AccessPassCategory.Personne)">Personnes</option>
+        <option value="@((int)AccessPassCategory.Vehicule)" selected="@(activeCat == AccessPassCategory.Vehicule)">Véhicules</option>
+    </select>
+    <input name="query" value="@ViewBag.Query" placeholder="🔍 Nom, matricule, immatriculation…" />
+    <button class="btn-primary">Filtrer</button>
+</form>
+
+<div class="card p-3 sm:p-4">
+    @if (passes.Count == 0)
+    {
+        <p class="text-center text-slate-400 py-8">Aucun laissez-passer.</p>
+    }
+    else
+    {
+        <p class="text-xs text-slate-500 sm:hidden mb-2">↔️ Faites défiler horizontalement</p>
+        <div class="table-wrap">
+            <table class="w-full text-xs sm:text-sm">
+                <thead class="text-xs uppercase text-slate-400 border-b border-slate-700">
+                    <tr>
+                        <th class="text-left p-2 whitespace-nowrap">Référence</th>
+                        <th class="text-left p-2">Type</th>
+                        <th class="text-left p-2">Titulaire</th>
+                        <th class="text-left p-2">Matricule</th>
+                        <th class="text-left p-2">Immatric.</th>
+                        <th class="text-left p-2 whitespace-nowrap">Validité</th>
+                        <th class="text-center p-2">Statut</th>
+                        @if (canEdit) { <th class="text-right p-2">Actions</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in passes)
+                    {
+                        var state = svc?.GetState(p) ?? AccessPassState.Valide;
+                        <tr class="border-b border-slate-800">
+                            <td class="p-2 mono text-cyan-400">@p.Reference</td>
+                            <td class="p-2"><span class="badge-bleu text-[10px] px-2 py-0.5 rounded">@TypeLabel(p.Type)</span> <span class="text-slate-500 text-[10px]">@(p.Category == AccessPassCategory.Vehicule ? "🚚" : "👤")</span></td>
+                            <td class="p-2 text-slate-200">@p.FullName <span class="text-slate-500 text-xs">@p.Company</span></td>
+                            <td class="p-2 mono text-slate-400">@p.Matricule</td>
+                            <td class="p-2 mono text-slate-400">@p.Plate</td>
+                            <td class="p-2 mono text-slate-400 whitespace-nowrap">@p.IssueDate.ToString("dd/MM/yy") → @p.EndDate.ToString("dd/MM/yy")</td>
+                            <td class="p-2 text-center"><span class="@StateClass(state) text-xs px-2 py-0.5 rounded">@StateLabel(state)</span></td>
+                            @if (canEdit)
+                            {
+                                <td class="p-2 text-right whitespace-nowrap">
+                                    <a asp-action="Details" asp-route-id="@p.Id" class="btn-secondary text-xs" title="Détails">👁️</a>
+                                    <a asp-action="Badge" asp-route-id="@p.Id" target="_blank" class="btn-secondary text-xs" title="Badge PDF">🪪</a>
+                                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn-secondary text-xs">✏️</a>
+                                    @if (!p.Revoked)
+                                    {
+                                        <form asp-action="Revoke" method="post" class="inline" data-confirm="Révoquer ce laissez-passer ?">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@p.Id" />
+                                            <button class="btn-secondary text-xs">Révoquer</button>
+                                        </form>
+                                    }
+                                    @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+                                    {
+                                        Controller = "AccessPass",
+                                        RouteValues = { ["id"] = p.Id.ToString() },
+                                        ConfirmMessage = "Déplacer vers la corbeille ?",
+                                        ButtonLabel = "🗑️",
+                                        ButtonClass = "btn-danger text-xs"
+                                    })
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

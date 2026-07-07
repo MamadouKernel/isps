@@ -1,0 +1,169 @@
+@model VesselCall
+@{
+    ViewData["Title"] = Model.VesselName;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    int portLevel = ViewBag.PortLevel as int? ?? 1;
+    bool dosNeeded = Model.ShipIspsLevel != portLevel;
+    string StatusClass(VesselCallStatus s) => s switch
+    {
+        VesselCallStatus.Annonce or VesselCallStatus.EnApproche => "badge-ambre",
+        VesselCallStatus.AQuai or VesselCallStatus.EnOperation => "badge-vert",
+        VesselCallStatus.Parti => "badge-bleu",
+        _ => "badge-rouge"
+    };
+    string DosStatusClass(DosStatus s) => s switch
+    {
+        DosStatus.Brouillon => "badge-ambre",
+        DosStatus.Active => "badge-vert",
+        DosStatus.Cloturee => "badge-bleu",
+        _ => "badge-rouge"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <div class="text-xs text-slate-400 uppercase tracking-wider">Escale</div>
+        <div class="flex items-center gap-3 mt-1 flex-wrap">
+            <span class="mono text-2xl text-cyan-400 font-bold">@Model.Reference</span>
+            <span class="@StatusClass(Model.Status) text-xs px-2 py-1 rounded">@Model.Status</span>
+            <span class="badge-bleu text-xs px-2 py-1 rounded">Navire N°@Model.ShipIspsLevel</span>
+            <span class="text-xs text-slate-400">vs Port N°@portLevel</span>
+        </div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.VesselName <span class="text-sm text-slate-500">@Model.ImoNumber</span></h1>
+    </div>
+    <div class="flex gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "Vessels",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Déplacer cette escale vers la corbeille ?"
+            })
+        }
+    </div>
+</div>
+
+@if (dosNeeded)
+{
+    <div class="card p-4 mb-5 border-l-4 border-amber-500">
+        <strong class="text-amber-400">⚠ Déclaration de Sûreté (DoS) requise</strong>
+        <p class="text-sm text-slate-300 mt-1">Les niveaux ISPS du navire (N°@Model.ShipIspsLevel) et du port (N°@portLevel) diffèrent — l'ISPS Part A § 5.2.1 impose la signature d'une DoS.</p>
+    </div>
+}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <aside class="card p-5 lg:col-span-1 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Informations navire</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Pavillon</dt><dd class="text-slate-200">@Model.Flag</dd></div>
+            <div><dt class="text-slate-500 text-xs">Indicatif</dt><dd class="text-slate-200 mono">@Model.CallSign</dd></div>
+            <div><dt class="text-slate-500 text-xs">Compagnie</dt><dd class="text-slate-200">@Model.Operator</dd></div>
+            <div><dt class="text-slate-500 text-xs">CSO</dt><dd class="text-slate-200">@Model.Cso</dd></div>
+            <div><dt class="text-slate-500 text-xs">SSO</dt><dd class="text-slate-200">@Model.Sso</dd></div>
+            <div><dt class="text-slate-500 text-xs">Équipage</dt><dd class="text-slate-200">@Model.CrewCount personnes</dd></div>
+            <div><dt class="text-slate-500 text-xs">Quai</dt><dd class="text-slate-200 mono">@Model.Berth</dd></div>
+            <div><dt class="text-slate-500 text-xs">ETA / ETD</dt><dd class="text-slate-200 mono text-xs">@Model.Eta.ToString("dd/MM HH:mm") → @(Model.Etd?.ToString("dd/MM HH:mm") ?? "—")</dd></div>
+        </dl>
+
+        @if (canEdit)
+        {
+            <div class="border-t border-slate-700 pt-3 mt-3 space-y-2">
+                <h4 class="text-xs uppercase text-slate-400">Workflow</h4>
+                <form asp-action="ChangeStatus" asp-route-id="@Model.Id" method="post" class="space-y-2">
+                    @Html.AntiForgeryToken()
+                    <select name="newStatus" class="w-full">
+                        @foreach (var s in Enum.GetValues<VesselCallStatus>())
+                        {
+                            <option value="@((int)s)" selected="@(Model.Status == s)">@s</option>
+                        }
+                    </select>
+                    <button class="btn-primary w-full text-sm">✓ Mettre à jour</button>
+                </form>
+            </div>
+        }
+    </aside>
+
+    <div class="card p-5 lg:col-span-2 space-y-5">
+        @if (!string.IsNullOrEmpty(Model.LastTenPorts))
+        {
+            <section>
+                <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">10 derniers ports d'escale</h3>
+                <p class="whitespace-pre-wrap text-slate-200 text-sm">@Model.LastTenPorts</p>
+            </section>
+        }
+        @if (!string.IsNullOrEmpty(Model.SecurityNotes))
+        {
+            <section>
+                <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Notes sûreté</h3>
+                <p class="whitespace-pre-wrap text-slate-200 text-sm">@Model.SecurityNotes</p>
+            </section>
+        }
+
+        <section>
+            <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-3">📄 Déclarations de Sûreté (@Model.Declarations.Count)</h3>
+            @if (Model.Declarations.Count == 0)
+            {
+                <p class="text-slate-400 text-sm">Aucune DoS pour cette escale.</p>
+            }
+            else
+            {
+                <div class="space-y-2">
+                    @foreach (var dos in Model.Declarations.OrderByDescending(d => d.EffectiveFrom))
+                    {
+                        <div class="border border-slate-700 rounded p-3">
+                            <div class="flex justify-between items-start gap-2 flex-wrap">
+                                <div>
+                                    <span class="mono text-cyan-400 text-xs">@dos.Reference</span>
+                                    <span class="@DosStatusClass(dos.Status) text-xs px-2 py-0.5 rounded ml-2">@dos.Status</span>
+                                </div>
+                                <span class="text-xs text-slate-500 mono">Valide du @dos.EffectiveFrom.ToString("dd/MM") au @(dos.EffectiveTo?.ToString("dd/MM") ?? "—")</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-1">Port N°@dos.PortLevel · Navire N°@dos.ShipLevel</div>
+                            @if (!string.IsNullOrEmpty(dos.AgreedMeasures))
+                            {
+                                <details class="mt-2"><summary class="text-xs text-slate-400 cursor-pointer">Mesures convenues</summary>
+                                    <p class="text-xs text-slate-300 mt-1 whitespace-pre-wrap">@dos.AgreedMeasures</p>
+                                </details>
+                            }
+                            @if (dos.Status == DosStatus.Brouillon && canEdit)
+                            {
+                                <form asp-action="SignDos" asp-route-id="@Model.Id" method="post" class="mt-2 flex flex-col sm:flex-row gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="dosId" value="@dos.Id" />
+                                    <input name="pfsoName" placeholder="Nom PFSO" required class="text-xs" />
+                                    <input name="shipName" placeholder="Nom commandant/SSO" required class="text-xs" />
+                                    <button class="btn-primary text-xs whitespace-nowrap">✓ Signer & activer</button>
+                                </form>
+                            }
+                            else if (dos.Status == DosStatus.Active)
+                            {
+                                <div class="text-xs text-emerald-400 mt-2">✓ Signée le @dos.SignedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") — PFSO @dos.SignedByPfso / Ship @dos.SignedByShip</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (canEdit)
+            {
+                <details class="mt-4 pt-3 border-t border-slate-700">
+                    <summary class="text-sm text-cyan-400 cursor-pointer">+ Créer une DoS</summary>
+                    <form asp-action="CreateDos" asp-route-id="@Model.Id" method="post" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        @Html.AntiForgeryToken()
+                        <div><label class="block text-xs mb-1">Niveau port</label><input name="PortLevel" type="number" min="1" max="3" value="@portLevel" required /></div>
+                        <div><label class="block text-xs mb-1">Niveau navire</label><input name="ShipLevel" type="number" min="1" max="3" value="@Model.ShipIspsLevel" required /></div>
+                        <div><label class="block text-xs mb-1">Effet à partir de</label><input name="EffectiveFrom" type="datetime-local" required /></div>
+                        <div><label class="block text-xs mb-1">Fin de validité</label><input name="EffectiveTo" type="datetime-local" /></div>
+                        <div class="md:col-span-2"><label class="block text-xs mb-1">Mesures convenues</label>
+                            <textarea name="AgreedMeasures" rows="4" placeholder="Liste des mesures convenues entre PFSO et SSO pour cette escale (renforcement patrouilles, contrôle gangway, etc.)"></textarea>
+                        </div>
+                        <div class="md:col-span-2 flex justify-end"><button class="btn-primary text-sm">Créer la DoS</button></div>
+                    </form>
+                </details>
+            }
+        </section>
+    </div>
+</div>

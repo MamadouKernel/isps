@@ -1,0 +1,54 @@
+@model Checkpoint
+@{
+    ViewData["Title"] = $"Scanner {Model.Code}";
+}
+
+<div class="max-w-lg mx-auto">
+    <div class="text-center mb-5">
+        <div class="text-[11px] uppercase text-slate-400 tracking-wider">Checkpoint</div>
+        <div class="mono text-3xl text-cyan-400 font-bold mt-1">@Model.Code</div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.Label</h1>
+        <div class="text-xs text-slate-400 mt-1">Zone : @Model.Zone</div>
+    </div>
+
+    <form method="post" asp-action="Scan" asp-route-code="@Model.Code" class="card p-5 space-y-4">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="latitude" id="lat" />
+        <input type="hidden" name="longitude" id="lng" />
+
+        <div>
+            <label class="block text-sm mb-1">Observations (optionnel)</label>
+            <textarea name="observations" rows="3" placeholder="Tout est normal / RAS"></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm mb-1">⚠ Signaler une anomalie (optionnel)</label>
+            <select name="anomalyType">
+                <option value="">— Aucune anomalie —</option>
+                <option>Intrusion détectée</option>
+                <option>Dégradation matériel</option>
+                <option>Clôture endommagée</option>
+                <option>Éclairage défaillant</option>
+                <option>Caméra HS</option>
+                <option>Personne suspecte</option>
+                <option>Véhicule non autorisé</option>
+                <option>Colis suspect</option>
+                <option>Autre — à préciser dans observations</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn-primary w-full">✓ Confirmer le passage</button>
+        <a asp-action="Index" class="block text-center text-sm text-slate-400 hover:text-cyan-400">← Annuler</a>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(p => {
+                document.getElementById('lat').value = p.coords.latitude.toFixed(6);
+                document.getElementById('lng').value = p.coords.longitude.toFixed(6);
+            }, () => { /* refus utilisateur — silencieux */ }, { timeout: 5000 });
+        }
+    </script>
+}

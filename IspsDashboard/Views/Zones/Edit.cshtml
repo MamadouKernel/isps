@@ -1,0 +1,14 @@
+@model RestrictedZone
+@{ ViewData["Title"] = $"Modifier {Model.Code}"; }
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Zone @Model.Code</h1></div>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="RowVersion" />
+    <input type="hidden" asp-for="Status" />
+    <partial name="_Form" model="Model" />
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

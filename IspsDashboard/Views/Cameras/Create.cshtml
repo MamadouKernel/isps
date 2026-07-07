@@ -1,0 +1,23 @@
+@model Camera
+@{
+    ViewData["Title"] = "Ajouter une caméra";
+}
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">+ Ajouter une caméra CCTV</h1></div>
+
+<form asp-action="Create" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label asp-for="Code" class="block text-sm mb-1"></label><input asp-for="Code" placeholder="CCTV-013" required /></div>
+        <div><label asp-for="Label" class="block text-sm mb-1"></label><input asp-for="Label" required /></div>
+        <div><label asp-for="Zone" class="block text-sm mb-1"></label><input asp-for="Zone" /></div>
+        <div><label asp-for="Type" class="block text-sm mb-1"></label><select asp-for="Type" asp-items="Html.GetEnumSelectList<CameraType>()"></select></div>
+        <div><label asp-for="Model" class="block text-sm mb-1"></label><input asp-for="Model" /></div>
+        <div><label asp-for="IpAddress" class="block text-sm mb-1"></label><input asp-for="IpAddress" /></div>
+        <div class="md:col-span-2"><label asp-for="Notes" class="block text-sm mb-1"></label><textarea asp-for="Notes" rows="2"></textarea></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Index" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Créer</button>
+    </div>
+</form>

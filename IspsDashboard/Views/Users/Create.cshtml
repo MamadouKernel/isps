@@ -1,0 +1,45 @@
+@model CreateUserViewModel
+@{
+    ViewData["Title"] = "Nouvel utilisateur";
+}
+<div class="max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold text-white mb-6">+ Nouvel utilisateur</h1>
+    <form asp-action="Create" method="post" class="card p-6 space-y-4">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+
+        <div>
+            <label asp-for="Email" class="block text-sm mb-1"></label>
+            <input asp-for="Email" class="w-full" />
+            <span asp-validation-for="Email"></span>
+        </div>
+        <div>
+            <label asp-for="FullName" class="block text-sm mb-1"></label>
+            <input asp-for="FullName" class="w-full" />
+            <span asp-validation-for="FullName"></span>
+        </div>
+        <div>
+            <label asp-for="Password" class="block text-sm mb-1"></label>
+            <input asp-for="Password" type="password" class="w-full" />
+            <span asp-validation-for="Password"></span>
+            <p class="text-xs text-slate-500 mt-1">Min 8 caractères, 1 majuscule, 1 chiffre, 1 symbole.</p>
+        </div>
+        <div>
+            <label asp-for="Role" class="block text-sm mb-1"></label>
+            <select asp-for="Role" class="w-full">
+                <option value="@DataSeeder.AdminRole">Administrateur</option>
+                <option value="@DataSeeder.EditorRole">Éditeur</option>
+                <option value="@DataSeeder.ReaderRole" selected>Lecteur</option>
+            </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <a asp-action="Index" class="btn-secondary">Annuler</a>
+            <button type="submit" class="btn-primary">Créer</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

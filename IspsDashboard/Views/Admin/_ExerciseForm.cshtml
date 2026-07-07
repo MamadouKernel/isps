@@ -1,0 +1,77 @@
+@model List<Exercise>
+@{
+    var type = ViewData["ExerciseType"] as ExerciseType? ?? ExerciseType.Training;
+    var allowMultiple = ViewData["AllowMultiple"] as bool? ?? true;
+}
+
+<form asp-action="SaveExercises" method="post" class="space-y-3">
+    @Html.AntiForgeryToken()
+    @for (int i = 0; i < Model.Count; i++)
+    {
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 border border-slate-700 p-3 rounded items-stretch lg:items-center">
+            <input type="hidden" name="exercises[@i].Id" value="@Model[i].Id" />
+            <input type="hidden" name="exercises[@i].Type" value="@((int)Model[i].Type)" />
+            <input type="hidden" name="exercises[@i].DisplayOrder" value="@Model[i].DisplayOrder" />
+            <input type="hidden" name="exercises[@i].Icon" value="@Model[i].Icon" />
+
+            <label class="lg:col-span-3">
+                <span class="block text-[11px] text-slate-500 mb-0.5 lg:hidden">Nom</span>
+                <input name="exercises[@i].Name" value="@Model[i].Name" placeholder="Nom" />
+            </label>
+            <label class="lg:col-span-2">
+                <span class="block text-[11px] text-slate-500 mb-0.5 lg:hidden">Date prévue</span>
+                <input name="exercises[@i].PlannedDate" type="date" value="@Model[i].PlannedDate.ToString("yyyy-MM-dd")" />
+            </label>
+            <label class="lg:col-span-2">
+                <span class="block text-[11px] text-slate-500 mb-0.5 lg:hidden">Responsable</span>
+                <input name="exercises[@i].Responsible" value="@Model[i].Responsible" placeholder="Responsable" />
+            </label>
+            <label class="lg:col-span-2">
+                <span class="block text-[11px] text-slate-500 mb-0.5 lg:hidden">Statut</span>
+                <select name="exercises[@i].Status">
+                    @foreach (var s in Enum.GetValues<ExerciseStatus>())
+                    {
+                        <option value="@((int)s)" selected="@(Model[i].Status == s)">@s</option>
+                    }
+                </select>
+            </label>
+            <label class="sm:col-span-2 lg:col-span-2">
+                <span class="block text-[11px] text-slate-500 mb-0.5 lg:hidden">Observations / REX</span>
+                <textarea name="exercises[@i].Observations" rows="2" placeholder="Observations / REX">@Model[i].Observations</textarea>
+            </label>
+            <div class="flex items-end justify-end lg:col-span-1">
+                <button type="submit" form="delExercise@(Model[i].Id)" class="btn-danger text-xs"
+                        onclick="return confirm('Supprimer cet exercice ?')">✕</button>
+            </div>
+        </div>
+    }
+    <div class="flex justify-end"><button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer</button></div>
+</form>
+
+@foreach (var ex in Model)
+{
+    <form id="delExercise@(ex.Id)" asp-action="DeleteExercise" method="post" class="hidden">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@ex.Id" />
+    </form>
+}
+
+@if (allowMultiple || Model.Count == 0)
+{
+    <details class="mt-4 pt-3 border-t border-slate-700">
+        <summary class="cursor-pointer text-sm text-cyan-400">➕ Ajouter un nouvel exercice</summary>
+        <form asp-action="AddExercise" method="post" class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="type" value="@((int)type)" />
+            <input name="name" placeholder="Nom" required class="lg:col-span-2" />
+            <input name="icon" placeholder="Icône (emoji)" maxlength="10" />
+            <input name="plannedDate" type="date" required />
+            <input name="responsible" placeholder="Responsable" />
+            <select name="status">
+                @foreach (var s in Enum.GetValues<ExerciseStatus>())
+                { <option value="@((int)s)">@s</option> }
+            </select>
+            <div class="lg:col-span-6 flex justify-end"><button class="btn-primary text-sm">➕ Ajouter l'exercice</button></div>
+        </form>
+    </details>
+}

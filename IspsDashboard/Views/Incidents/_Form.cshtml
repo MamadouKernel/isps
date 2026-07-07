@@ -1,0 +1,63 @@
+@model IncidentEditViewModel
+
+<div asp-validation-summary="All" class="text-red-400 text-sm mb-3"></div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="md:col-span-2">
+        <label asp-for="Title" class="block text-sm mb-1"></label>
+        <input asp-for="Title" class="w-full" />
+        <span asp-validation-for="Title"></span>
+    </div>
+
+    <div>
+        <label asp-for="Category" class="block text-sm mb-1"></label>
+        <select asp-for="Category" asp-items="Html.GetEnumSelectList<IncidentCategory>()" class="w-full"></select>
+    </div>
+
+    <div>
+        <label asp-for="Severity" class="block text-sm mb-1"></label>
+        <select asp-for="Severity" asp-items="Html.GetEnumSelectList<IncidentSeverity>()" class="w-full"></select>
+    </div>
+
+    <div>
+        <label asp-for="OccurredAt" class="block text-sm mb-1"></label>
+        <input asp-for="OccurredAt" type="datetime-local" class="w-full" />
+        <span asp-validation-for="OccurredAt"></span>
+    </div>
+
+    <div>
+        <label asp-for="Zone" class="block text-sm mb-1"></label>
+        <input asp-for="Zone" placeholder="ex: Portail PC6, quai Q4, zone tampon…" class="w-full" />
+    </div>
+
+    <div>
+        <label asp-for="ReportedBy" class="block text-sm mb-1"></label>
+        <input asp-for="ReportedBy" placeholder="Nom de l'agent" class="w-full" />
+    </div>
+
+    <div>
+        <label asp-for="Investigator" class="block text-sm mb-1"></label>
+        <input asp-for="Investigator" placeholder="Responsable de l'investigation" class="w-full" />
+    </div>
+
+    <div class="md:col-span-2">
+        <label asp-for="Description" class="block text-sm mb-1"></label>
+        <textarea asp-for="Description" rows="4" class="w-full" placeholder="Que s'est-il passé exactement ?"></textarea>
+        <span asp-validation-for="Description"></span>
+    </div>
+
+    <div class="md:col-span-2">
+        <label asp-for="ActionsTaken" class="block text-sm mb-1"></label>
+        <textarea asp-for="ActionsTaken" rows="3" class="w-full" placeholder="Quelles mesures ont été prises ?"></textarea>
+    </div>
+
+    <div class="md:col-span-2">
+        <label asp-for="LessonsLearned" class="block text-sm mb-1"></label>
+        <textarea asp-for="LessonsLearned" rows="3" class="w-full" placeholder="Quels enseignements / actions correctives ?"></textarea>
+    </div>
+
+    <div class="md:col-span-2">
+        <label class="block text-sm mb-1">Pièces jointes (photos, PDF — max 5 Mo / fichier)</label>
+        <input type="file" name="NewAttachments" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" class="w-full p-2" />
+    </div>
+</div>

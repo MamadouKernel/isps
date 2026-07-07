@@ -1,0 +1,139 @@
+@{
+    ViewData["Title"] = "Registre des visiteurs";
+    var onSite = ViewBag.OnSite as IReadOnlyList<Visitor> ?? new List<Visitor>();
+    var today = ViewBag.Today as IReadOnlyList<Visitor> ?? new List<Visitor>();
+    var filtered = ViewBag.Filtered as IReadOnlyList<Visitor> ?? new List<Visitor>();
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    string StatusClass(VisitorStatus s) => s switch
+    {
+        VisitorStatus.PreEnregistre => "badge-ambre",
+        VisitorStatus.SurSite => "badge-vert",
+        VisitorStatus.Sorti => "badge-bleu",
+        _ => "badge-rouge"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">🛂 Registre des visiteurs</h1>
+        <p class="text-xs sm:text-sm text-slate-400">@onSite.Count visiteur(s) actuellement sur site</p>
+    </div>
+    @if (canEdit)
+    {
+        <a asp-action="Create" class="btn-primary text-center w-full sm:w-auto">+ Pré-enregistrer</a>
+    }
+</div>
+
+<div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="card p-3 text-center">
+        <div class="text-[11px] uppercase text-slate-400">Sur site</div>
+        <div class="text-2xl font-bold mono text-emerald-400">@onSite.Count</div>
+    </div>
+    <div class="card p-3 text-center">
+        <div class="text-[11px] uppercase text-slate-400">Attendus aujourd'hui</div>
+        <div class="text-2xl font-bold mono text-cyan-400">@today.Count(t => t.Status == VisitorStatus.PreEnregistre)</div>
+    </div>
+    <div class="card p-3 text-center">
+        <div class="text-[11px] uppercase text-slate-400">Sortis aujourd'hui</div>
+        <div class="text-2xl font-bold mono text-slate-300">@today.Count(t => t.Status == VisitorStatus.Sorti)</div>
+    </div>
+</div>
+
+@if (onSite.Count > 0)
+{
+    <section class="card p-4 mb-5">
+        <h3 class="font-semibold text-emerald-400 mb-3 text-sm uppercase">🟢 Sur site</h3>
+        <div class="table-wrap">
+            <table class="w-full text-sm">
+                <thead class="text-xs text-slate-400 border-b border-slate-700">
+                    <tr><th class="text-left p-2">Référence</th><th class="text-left p-2">Visiteur</th><th class="text-left p-2">Entreprise</th><th class="text-left p-2">Badge</th><th class="text-left p-2">Entré à</th><th class="text-right p-2">Action</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in onSite)
+                    {
+                        <tr class="border-b border-slate-800">
+                            <td class="p-2 mono text-cyan-400">@v.Reference</td>
+                            <td class="p-2 text-slate-200">@v.FullName</td>
+                            <td class="p-2 text-slate-400">@v.Company</td>
+                            <td class="p-2 mono text-slate-300">@v.BadgeIssued</td>
+                            <td class="p-2 mono text-slate-400">@(v.CheckInAt?.ToLocalTime().ToString("HH:mm") ?? "—")</td>
+                            <td class="p-2 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <a asp-action="Details" asp-route-id="@v.Id" class="btn-secondary text-xs" title="Détails">👁️</a>
+                                    @if (canEdit)
+                                    {
+                                        <form asp-action="CheckOut" method="post" class="inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@v.Id" />
+                                            <button class="btn-secondary text-xs">↓ Sortie</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<section class="card p-4">
+    <h3 class="font-semibold text-cyan-400 mb-3 text-sm uppercase">📅 Visiteurs attendus aujourd'hui</h3>
+    @if (today.Count == 0)
+    {
+        <p class="text-slate-400 text-sm">Aucun visiteur prévu aujourd'hui.</p>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="w-full text-sm">
+                <thead class="text-xs text-slate-400 border-b border-slate-700">
+                    <tr><th class="text-left p-2">Réf.</th><th class="text-left p-2">Visiteur</th><th class="text-left p-2">Motif</th><th class="text-left p-2">Hôte</th><th class="text-left p-2">Heure</th><th class="text-center p-2">Statut</th><th class="text-right p-2">Action</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in today)
+                    {
+                        <tr class="border-b border-slate-800">
+                            <td class="p-2 mono text-cyan-400">@v.Reference</td>
+                            <td class="p-2 text-slate-200">@v.FullName <span class="text-slate-500 text-xs">(@v.Company)</span></td>
+                            <td class="p-2 text-slate-400">@v.Purpose</td>
+                            <td class="p-2 text-slate-400">@v.Host</td>
+                            <td class="p-2 mono text-slate-400">@v.ScheduledArrival.ToString("HH:mm")</td>
+                            <td class="p-2 text-center"><span class="@StatusClass(v.Status) px-2 py-0.5 rounded text-xs">@v.Status</span></td>
+                            <td class="p-2 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <a asp-action="Details" asp-route-id="@v.Id" class="btn-secondary text-xs" title="Détails">👁️</a>
+                                    @if (canEdit)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@v.Id" class="btn-secondary text-xs" title="Modifier">✏️</a>
+                                    }
+                                    @if (canEdit && v.Status == VisitorStatus.PreEnregistre)
+                                    {
+                                        <form asp-action="CheckIn" method="post" class="inline flex gap-1">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@v.Id" />
+                                            <input name="badgeIssued" placeholder="N° badge" class="text-xs w-24" required />
+                                            <button class="btn-primary text-xs">↑ Entrée</button>
+                                        </form>
+                                    }
+                                    @if (canEdit)
+                                    {
+                                        @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+                                        {
+                                            Controller = "Visitors",
+                                            RouteValues = { ["id"] = v.Id.ToString() },
+                                            ConfirmMessage = "Déplacer vers la corbeille ?",
+                                            ButtonLabel = "🗑️",
+                                            ButtonClass = "btn-danger text-xs"
+                                        })
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -1,0 +1,402 @@
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@inject IspsDashboard.Services.Interfaces.IAccessPassService AccessPassCounts
+@inject IspsDashboard.Services.Interfaces.IVisitorService VisitorCounts
+@inject IspsDashboard.Services.Interfaces.IVehicleAccessService VehicleAccessCounts
+@{
+    var isAuth = User.Identity?.IsAuthenticated ?? false;
+    int countDaily = 0, countQuarterly = 0, countAnnual = 0, countVehiclePasses = 0, countVehicleToday = 0, countVisitorsOnSite = 0;
+    if (isAuth)
+    {
+        countDaily = await AccessPassCounts.CountActiveByAsync(IspsDashboard.Models.Enums.AccessPassType.Journalier);
+        countQuarterly = await AccessPassCounts.CountActiveByAsync(IspsDashboard.Models.Enums.AccessPassType.Trimestriel);
+        countAnnual = await AccessPassCounts.CountActiveByAsync(IspsDashboard.Models.Enums.AccessPassType.Annuel);
+        countVehiclePasses = await AccessPassCounts.CountActiveByAsync(category: IspsDashboard.Models.Enums.AccessPassCategory.Vehicule);
+        countVehicleToday = await VehicleAccessCounts.CountTodayAsync();
+        countVisitorsOnSite = await VisitorCounts.CountOnSiteAsync();
+    }
+    string ResolveLogo(string fallback = "/images/logo.svg")
+    {
+        var dir = System.IO.Path.Combine(Env.WebRootPath, "images");
+        foreach (var ext in new[] { ".jpeg", ".jpg", ".png", ".webp", ".svg" })
+        {
+            if (System.IO.File.Exists(System.IO.Path.Combine(dir, "logo" + ext)))
+                return "/images/logo" + ext;
+        }
+        return fallback;
+    }
+    var logoUrl = ResolveLogo();
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a1628" />
+    <title>@ViewData["Title"] - Sûreté ISPS CIT</title>
+    <link rel="icon" type="image/svg+xml" href="~/images/logo-mark.svg" />
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="~/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sûreté ISPS" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" />
+    <style>
+        :root {
+            --navy-900: #0a1628;
+            --navy-800: #0f1f3a;
+            --navy-700: #15294d;
+            --navy-600: #1e3a66;
+            --cyan-400: #22d3ee;
+            --cyan-500: #06b6d4;
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --gold: #d4a017;
+        }
+        * { -webkit-tap-highlight-color: transparent; }
+        html, body { font-family: 'Inter', sans-serif; background: var(--navy-900); color: #e5e7eb; }
+        html { -webkit-text-size-adjust: 100%; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .card { background: linear-gradient(135deg, rgba(21,41,77,0.85), rgba(15,31,58,0.85)); border: 1px solid rgba(34,211,238,0.15); border-radius: 12px; backdrop-filter: blur(8px); }
+        .card:hover { border-color: rgba(34,211,238,0.4); transition: border 0.2s; }
+        .badge-vert { background: rgba(16,185,129,0.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.4); }
+        .badge-ambre { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1px solid rgba(245,158,11,0.4); }
+        .badge-rouge { background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+        .badge-bleu { background: rgba(59,130,246,0.18); color: #93c5fd; border: 1px solid rgba(59,130,246,0.4); }
+        .gold-line { background: linear-gradient(90deg, transparent, var(--gold), transparent); height: 2px; }
+        .live-dot { width: 8px; height: 8px; background: var(--emerald); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; box-shadow: 0 0 8px var(--emerald); }
+        @@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+        .nav-link { padding: 8px 14px; border-radius: 8px; transition: all 0.2s; display: block; font-size: 0.92rem; white-space: nowrap; }
+        .nav-link:hover { background: rgba(34,211,238,0.1); color: var(--cyan-400); }
+        .nav-link.active { background: rgba(34,211,238,0.15); color: var(--cyan-400); }
+        .tab-btn { padding: 10px 16px; border-radius: 8px 8px 0 0; background: transparent; border: 1px solid transparent; cursor: pointer; color: #94a3b8; font-weight: 500; white-space: nowrap; font-size: 0.9rem; }
+        .tab-btn.active { background: var(--navy-700); border-color: rgba(34,211,238,0.3); border-bottom-color: var(--navy-700); color: var(--cyan-400); }
+        input, select, textarea { background: var(--navy-800); border: 1px solid rgba(148,163,184,0.2); color: #e5e7eb; border-radius: 6px; padding: 8px 10px; font-size: 16px; /* prevent iOS zoom */ width: 100%; box-sizing: border-box; }
+        @@media (min-width: 768px) { input, select, textarea { font-size: 0.92rem; } }
+        input[type="checkbox"] { width: auto; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan-400); }
+        .btn-primary { background: var(--cyan-500); color: #0a1628; font-weight: 600; padding: 10px 20px; border-radius: 8px; transition: all 0.2s; cursor: pointer; min-height: 44px; }
+        .btn-primary:hover { background: var(--cyan-400); box-shadow: 0 0 12px rgba(34,211,238,0.5); }
+        .btn-secondary { background: rgba(148,163,184,0.15); color: #cbd5e1; padding: 8px 16px; border-radius: 8px; cursor: pointer; min-height: 38px; }
+        .btn-danger { background: rgba(239,68,68,0.18); color: #fca5a5; padding: 8px 14px; border-radius: 6px; cursor: pointer; min-height: 36px; }
+        .toast { animation: slideDown 0.3s ease-out; }
+        @@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .field-validation-error { color: #fca5a5; font-size: 0.85rem; display: block; margin-top: 2px; }
+
+        /* Scrollbars dans les conteneurs scroll horizontaux */
+        .h-scroll { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+        .h-scroll::-webkit-scrollbar { height: 6px; }
+        .h-scroll::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.3); border-radius: 3px; }
+
+        /* Mobile menu */
+        .mobile-menu { transition: max-height 0.3s ease-out, opacity 0.2s; max-height: 0; opacity: 0; overflow: hidden; }
+        .mobile-menu.open { max-height: 600px; opacity: 1; }
+        .burger { width: 28px; height: 28px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+        .burger span { display: block; height: 2px; width: 100%; background: #e5e7eb; border-radius: 1px; transition: all 0.2s; }
+        .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .burger.open span:nth-child(2) { opacity: 0; }
+        .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        /* Dropdowns au clic (fiables, accessibles) */
+        .dd { position: relative; }
+        .dd-panel { display: none; position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px;
+            background: var(--navy-700); border: 1px solid rgba(34,211,238,0.2); border-radius: 10px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4); padding: 6px; z-index: 50; }
+        .dd.open .dd-panel { display: block; animation: ddIn 0.15s ease-out; }
+        @@keyframes ddIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .dd-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 7px;
+            color: #cbd5e1; font-size: 0.9rem; white-space: nowrap; transition: all 0.15s; }
+        .dd-item:hover { background: rgba(34,211,238,0.12); color: var(--cyan-400); }
+        .dd-item.active { background: rgba(34,211,238,0.15); color: var(--cyan-400); }
+        .dd-count { margin-left: auto; background: rgba(34,211,238,0.15); color: var(--cyan-400); font-size: 0.72rem; font-weight: 600;
+            padding: 1px 7px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; }
+        .nav-count { background: rgba(34,211,238,0.15); color: var(--cyan-400); font-size: 0.72rem; font-weight: 600;
+            padding: 1px 7px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; margin-left: 6px; }
+        .dd-section { padding: 8px 12px 4px; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 600; }
+        .dd-sep { height: 1px; background: rgba(148,163,184,0.12); margin: 4px 0; }
+        .dd-panel.wide { min-width: 420px; }
+        .dd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+        .dd-toggle { display: inline-flex; align-items: center; gap: 4px; }
+        .dd-toggle .chev { transition: transform 0.2s; font-size: 0.65rem; }
+        .dd.open .dd-toggle .chev { transform: rotate(180deg); }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--cyan-500), var(--navy-600));
+            display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+
+        /* Tables: forcer scroll horizontal sur mobile */
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-wrap table { min-width: 600px; }
+
+        /* Cartes mobile-friendly pour les exercices */
+        .exercise-row { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+        @@media (min-width: 640px) { .exercise-row { flex-direction: row; align-items: center; justify-content: space-between; } }
+    </style>
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="min-h-screen">
+    @if (isAuth)
+    {
+        <header class="bg-[var(--navy-800)] border-b border-cyan-900/40 sticky top-0 z-30 overflow-x-clip">
+            <div class="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-2.5">
+                <div class="flex items-center justify-between gap-2">
+                    <a asp-controller="Dashboard" asp-action="Index" class="flex items-center flex-shrink-0">
+                        <div class="bg-white/95 rounded-md px-2 py-1 shadow-sm flex-shrink-0">
+                            <img src="@logoUrl" alt="Côte d'Ivoire Terminal" class="h-7 w-auto max-w-[150px] object-contain block" />
+                        </div>
+                    </a>
+
+                    @{
+                        var userName = User.Identity?.Name ?? "";
+                        var namePart = userName.Contains('@') ? userName.Split('@')[0] : userName;
+                        var initials = string.Concat(namePart
+                            .Split(new[] { '.', ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Take(2).Select(p => char.ToUpperInvariant(p[0])));
+                        if (string.IsNullOrEmpty(initials)) initials = "?";
+                    }
+                    <!-- Desktop nav -->
+                    <nav class="hidden xl:flex items-center gap-0.5 text-[13px] min-w-0">
+                        <a class="nav-link @(ctrl == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">📊 Pilotage</a>
+
+                        <!-- Contrôle d'accès -->
+                        <div class="dd" data-dd>
+                            <button type="button" class="nav-link dd-toggle @(ctrl is "AccessPass" or "VehicleAccess" or "Visitors" ? "active" : "")">🪪 Contrôle d'accès <span class="chev">▾</span></button>
+                            <div class="dd-panel">
+                                <div class="dd-section">Laissez-passer</div>
+                                <a class="dd-item @(ctrl == "AccessPass" ? "active" : "")" asp-controller="AccessPass" asp-action="Index" asp-route-type="0">📅 Accès journaliers <span class="dd-count">@countDaily</span></a>
+                                <a class="dd-item @(ctrl == "AccessPass" ? "active" : "")" asp-controller="AccessPass" asp-action="Index" asp-route-type="1">🗓️ Accès trimestriels <span class="dd-count">@countQuarterly</span></a>
+                                <a class="dd-item @(ctrl == "AccessPass" ? "active" : "")" asp-controller="AccessPass" asp-action="Index" asp-route-type="2">📆 Accès annuels <span class="dd-count">@countAnnual</span></a>
+                                <div class="dd-sep"></div>
+                                <div class="dd-section">Mouvements</div>
+                                <a class="dd-item @(ctrl == "AccessPass" ? "active" : "")" asp-controller="AccessPass" asp-action="Index" asp-route-category="1">🚙 Laissez-passer véhicules <span class="dd-count">@countVehiclePasses</span></a>
+                                <a class="dd-item @(ctrl == "VehicleAccess" ? "active" : "")" asp-controller="VehicleAccess" asp-action="Index">🚚 Journal des entrées/sorties véhicules <span class="dd-count" title="Mouvements aujourd'hui">@countVehicleToday</span></a>
+                                <a class="dd-item @(ctrl == "Visitors" ? "active" : "")" asp-controller="Visitors" asp-action="Index">🛂 Visiteurs <span class="dd-count" title="Sur site">@countVisitorsOnSite</span></a>
+                            </div>
+                        </div>
+
+                        <!-- Opérations -->
+                        <div class="dd" data-dd>
+                            <button type="button" class="nav-link dd-toggle @(ctrl is "Incidents" or "Patrols" or "Zones" or "Vessels" or "Briefings" or "Marsec" ? "active" : "")">🛡️ Opérations <span class="chev">▾</span></button>
+                            <div class="dd-panel">
+                                <div class="dd-section">Surveillance</div>
+                                <a class="dd-item @(ctrl == "Incidents" ? "active" : "")" asp-controller="Incidents" asp-action="Index">🚨 Incidents</a>
+                                <a class="dd-item @(ctrl == "Patrols" ? "active" : "")" asp-controller="Patrols" asp-action="Index">🚶 Patrouilles</a>
+                                <a class="dd-item @(ctrl == "Zones" ? "active" : "")" asp-controller="Zones" asp-action="Index">🚧 Zones restreintes</a>
+                                <div class="dd-sep"></div>
+                                <div class="dd-section">Maritime & crise</div>
+                                <a class="dd-item @(ctrl == "Vessels" ? "active" : "")" asp-controller="Vessels" asp-action="Index">🚢 Navires & DoS</a>
+                                <a class="dd-item @(ctrl == "Marsec" ? "active" : "")" asp-controller="Marsec" asp-action="Index">⚓ Niveau MARSEC</a>
+                                <div class="dd-sep"></div>
+                                <div class="dd-section">Équipe</div>
+                                <a class="dd-item @(ctrl == "Briefings" ? "active" : "")" asp-controller="Briefings" asp-action="Index">📋 Briefings prise de poste</a>
+                            </div>
+                        </div>
+
+                        <!-- Conformité -->
+                        <div class="dd" data-dd>
+                            <button type="button" class="nav-link dd-toggle @(ctrl is "NonConformities" or "Audits" or "Rex" or "Analytics" or "Reports" ? "active" : "")">✅ Conformité <span class="chev">▾</span></button>
+                            <div class="dd-panel">
+                                <div class="dd-section">Suivi</div>
+                                <a class="dd-item @(ctrl == "NonConformities" ? "active" : "")" asp-controller="NonConformities" asp-action="Index">❗ Non-conformités</a>
+                                <a class="dd-item @(ctrl == "Audits" ? "active" : "")" asp-controller="Audits" asp-action="Index">🔍 Audits internes</a>
+                                <a class="dd-item @(ctrl == "Rex" ? "active" : "")" asp-controller="Rex" asp-action="Index">📝 REX exercices</a>
+                                <div class="dd-sep"></div>
+                                <div class="dd-section">Analyse & reporting</div>
+                                <a class="dd-item @(ctrl == "Analytics" ? "active" : "")" asp-controller="Analytics" asp-action="Index">📈 Statistiques</a>
+                                <a class="dd-item @(ctrl == "Reports" ? "active" : "")" asp-controller="Reports" asp-action="Index">📄 Rapports PDF</a>
+                            </div>
+                        </div>
+
+                        <!-- Ressources -->
+                        <div class="dd" data-dd>
+                            <button type="button" class="nav-link dd-toggle @(ctrl is "Personnel" or "Habilitations" or "Cameras" or "Contacts" or "Documents" ? "active" : "")">🗂️ Ressources <span class="chev">▾</span></button>
+                            <div class="dd-panel">
+                                <div class="dd-section">Personnel</div>
+                                <a class="dd-item @(ctrl == "Personnel" ? "active" : "")" asp-controller="Personnel" asp-action="Index">👮 Agents</a>
+                                <a class="dd-item @(ctrl == "Habilitations" ? "active" : "")" asp-controller="Habilitations" asp-action="Index">🎓 Habilitations</a>
+                                <div class="dd-sep"></div>
+                                <div class="dd-section">Moyens & documents</div>
+                                <a class="dd-item @(ctrl == "Cameras" ? "active" : "")" asp-controller="Cameras" asp-action="Index">🎥 Caméras CCTV</a>
+                                <a class="dd-item @(ctrl == "Contacts" ? "active" : "")" asp-controller="Contacts" asp-action="Index">📞 Annuaire externe</a>
+                                <a class="dd-item @(ctrl == "Documents" ? "active" : "")" asp-controller="Documents" asp-action="Index">📁 Documents PFSP</a>
+                            </div>
+                        </div>
+
+                        @if (User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole))
+                        {
+                            <div class="dd" data-dd>
+                                <button type="button" class="nav-link dd-toggle @(ctrl is "Admin" or "Users" ? "active" : "")">⚙️ Administration <span class="chev">▾</span></button>
+                                <div class="dd-panel">
+                                    <div class="dd-section">Configuration</div>
+                                    <a class="dd-item @(ctrl == "Admin" ? "active" : "")" asp-controller="Admin" asp-action="Index">✏️ Paramétrage & indicateurs</a>
+                                    @if (User.IsInRole(DataSeeder.AdminRole))
+                                    {
+                                        <div class="dd-sep"></div>
+                                        <div class="dd-section">Comptes & sécurité</div>
+                                        <a class="dd-item @(ctrl == "Users" ? "active" : "")" asp-controller="Users" asp-action="Index">👤 Utilisateurs</a>
+                                        <a class="dd-item" asp-controller="Admin" asp-action="AuditLogs">📋 Journal d'audit</a>
+                                        <a class="dd-item @(ctrl == "Trash" ? "active" : "")" asp-controller="Trash" asp-action="Index">🗑️ Corbeille</a>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Bloc utilisateur -->
+                        <div class="flex items-center gap-2 ml-2 pl-2 border-l border-slate-700 flex-shrink-0">
+                            @await Component.InvokeAsync("AlertCenter")
+                            <div class="hidden 2xl:flex items-center gap-1.5" title="Mises à jour temps réel actives">
+                                <div class="live-dot"></div>
+                                <span class="text-[11px] text-emerald-400 font-medium mono">LIVE</span>
+                            </div>
+                            <div class="dd" data-dd>
+                                <button type="button" class="dd-toggle flex items-center gap-2">
+                                    <div class="avatar">@initials</div>
+                                    <span class="hidden 2xl:inline text-xs text-slate-300 max-w-[110px] truncate">@namePart</span>
+                                    <span class="chev text-slate-500">▾</span>
+                                </button>
+                                <div class="dd-panel">
+                                    <div class="px-3 py-2 border-b border-slate-700 mb-1">
+                                        <div class="text-sm text-white truncate">@namePart</div>
+                                        <div class="text-[11px] text-slate-500 truncate">@userName</div>
+                                        @{
+                                            var roleLabel = User.IsInRole(DataSeeder.AdminRole) ? "Administrateur"
+                                                : User.IsInRole(DataSeeder.EditorRole) ? "Éditeur"
+                                                : "Lecteur — consultation seule";
+                                            var roleCls = User.IsInRole(DataSeeder.AdminRole) ? "badge-rouge"
+                                                : User.IsInRole(DataSeeder.EditorRole) ? "badge-ambre" : "badge-vert";
+                                        }
+                                        <span class="@roleCls text-[10px] px-2 py-0.5 rounded inline-block mt-1">@roleLabel</span>
+                                    </div>
+                                    <form asp-controller="Account" asp-action="Logout" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dd-item w-full text-left">🚪 Déconnexion</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <!-- Mobile burger -->
+                    <button id="burger" class="burger xl:hidden" aria-label="Menu" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+
+                <!-- Mobile menu -->
+                <div id="mobileMenu" class="mobile-menu xl:hidden">
+                    <nav class="flex flex-col gap-1 mt-3 pt-3 border-t border-slate-700">
+                        <a class="nav-link @(ctrl == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">📊 Pilotage</a>
+                        <div class="text-xs uppercase text-slate-500 mt-2 px-3">Contrôle d'accès</div>
+                        <a class="nav-link flex items-center justify-between @(ctrl == "AccessPass" ? "active" : "")" asp-controller="AccessPass" asp-action="Index"><span>🪪 Laissez-passer</span> <span class="nav-count" title="Actifs">@(countDaily + countQuarterly + countAnnual)</span></a>
+                        <a class="nav-link flex items-center justify-between @(ctrl == "VehicleAccess" ? "active" : "")" asp-controller="VehicleAccess" asp-action="Index"><span>🚚 Véhicules & camions</span> <span class="nav-count" title="Mouvements aujourd'hui">@countVehicleToday</span></a>
+                        <a class="nav-link flex items-center justify-between @(ctrl == "Visitors" ? "active" : "")" asp-controller="Visitors" asp-action="Index"><span>🛂 Visiteurs</span> <span class="nav-count" title="Sur site">@countVisitorsOnSite</span></a>
+                        <div class="text-xs uppercase text-slate-500 mt-2 px-3">Opérations</div>
+                        <a class="nav-link @(ctrl == "Incidents" ? "active" : "")" asp-controller="Incidents" asp-action="Index">🚨 Incidents</a>
+                        <a class="nav-link @(ctrl == "Patrols" ? "active" : "")" asp-controller="Patrols" asp-action="Index">🚶 Patrouilles</a>
+                        <a class="nav-link @(ctrl == "Zones" ? "active" : "")" asp-controller="Zones" asp-action="Index">🚧 Zones restreintes</a>
+                        <a class="nav-link @(ctrl == "Vessels" ? "active" : "")" asp-controller="Vessels" asp-action="Index">🚢 Navires & DoS</a>
+                        <a class="nav-link @(ctrl == "Briefings" ? "active" : "")" asp-controller="Briefings" asp-action="Index">📋 Briefings</a>
+                        <a class="nav-link @(ctrl == "Marsec" ? "active" : "")" asp-controller="Marsec" asp-action="Index">⚓ Niveau MARSEC</a>
+                        <div class="text-xs uppercase text-slate-500 mt-2 px-3">Ressources</div>
+                        <a class="nav-link @(ctrl == "Personnel" ? "active" : "")" asp-controller="Personnel" asp-action="Index">👮 Agents</a>
+                        <a class="nav-link @(ctrl == "Habilitations" ? "active" : "")" asp-controller="Habilitations" asp-action="Index">🎓 Habilitations</a>
+                        <a class="nav-link @(ctrl == "Cameras" ? "active" : "")" asp-controller="Cameras" asp-action="Index">🎥 Caméras CCTV</a>
+                        <a class="nav-link @(ctrl == "Contacts" ? "active" : "")" asp-controller="Contacts" asp-action="Index">📞 Annuaire externe</a>
+                        <a class="nav-link @(ctrl == "Documents" ? "active" : "")" asp-controller="Documents" asp-action="Index">📁 Documents PFSP</a>
+                        <div class="text-xs uppercase text-slate-500 mt-2 px-3">Conformité</div>
+                        <a class="nav-link @(ctrl == "NonConformities" ? "active" : "")" asp-controller="NonConformities" asp-action="Index">❗ Non-conformités</a>
+                        <a class="nav-link @(ctrl == "Audits" ? "active" : "")" asp-controller="Audits" asp-action="Index">🔍 Audits internes</a>
+                        <a class="nav-link @(ctrl == "Rex" ? "active" : "")" asp-controller="Rex" asp-action="Index">📝 REX exercices</a>
+                        <a class="nav-link @(ctrl == "Analytics" ? "active" : "")" asp-controller="Analytics" asp-action="Index">📈 Statistiques</a>
+                        <a class="nav-link @(ctrl == "Reports" ? "active" : "")" asp-controller="Reports" asp-action="Index">📄 Rapports PDF</a>
+                        @if (User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole))
+                        {
+                            <div class="text-xs uppercase text-slate-500 mt-2 px-3">Administration</div>
+                            <a class="nav-link @(ctrl == "Admin" ? "active" : "")" asp-controller="Admin" asp-action="Index">✏️ Paramétrage</a>
+                        }
+                        @if (User.IsInRole(DataSeeder.AdminRole))
+                        {
+                            <a class="nav-link @(ctrl == "Users" ? "active" : "")" asp-controller="Users" asp-action="Index">👤 Utilisateurs</a>
+                            <a class="nav-link" asp-controller="Admin" asp-action="AuditLogs">📋 Journal d'audit</a>
+                        }
+                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-700">
+                            <div class="flex items-center gap-2 px-3 py-1.5 rounded border border-slate-700">
+                                <div class="live-dot"></div>
+                                <span class="text-xs text-emerald-400 font-medium mono">LIVE</span>
+                                <span class="text-xs text-slate-400 ml-2 truncate">@User.Identity?.Name</span>
+                            </div>
+                            <form asp-controller="Account" asp-action="Logout" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn-secondary text-xs">Déconnexion</button>
+                            </form>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </header>
+    }
+
+    @if (TempData["Success"] is string s)
+    {
+        <div class="toast fixed top-20 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 px-4 py-3 rounded-lg shadow-lg">
+            ✓ @s
+        </div>
+        <script>setTimeout(() => document.querySelector('.toast')?.remove(), 3500);</script>
+    }
+    @if (TempData["Error"] is string e)
+    {
+        <div class="toast fixed top-20 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg shadow-lg">
+            ✗ @e
+        </div>
+    }
+
+    <main class="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+        @RenderBody()
+    </main>
+
+    <script>
+        // Dropdowns au clic : ouverture exclusive, fermeture au clic extérieur / Escape
+        (function () {
+            const dds = Array.from(document.querySelectorAll('[data-dd]'));
+            dds.forEach(dd => {
+                const toggle = dd.querySelector('.dd-toggle');
+                if (!toggle) return;
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wasOpen = dd.classList.contains('open');
+                    dds.forEach(d => d.classList.remove('open'));
+                    if (!wasOpen) dd.classList.add('open');
+                });
+            });
+            document.addEventListener('click', () => dds.forEach(d => d.classList.remove('open')));
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dds.forEach(d => d.classList.remove('open')); });
+        })();
+    </script>
+    <script>
+        (function () {
+            const burger = document.getElementById('burger');
+            const menu = document.getElementById('mobileMenu');
+            if (burger && menu) {
+                burger.addEventListener('click', () => {
+                    const open = menu.classList.toggle('open');
+                    burger.classList.toggle('open', open);
+                    burger.setAttribute('aria-expanded', open);
+                });
+            }
+        })();
+    </script>
+    @* Validation côté client (jQuery + unobtrusive) — messages français instantanés sur tous les formulaires *@
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+@model SecurityDocument
+@{
+    ViewData["Title"] = $"Modifier {Model.Title}";
+}
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Modifier le document</h1></div>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Status" />
+    <input type="hidden" asp-for="EffectiveDate" />
+    <input type="hidden" asp-for="RowVersion" />
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2"><label asp-for="Title" class="block text-sm mb-1"></label><input asp-for="Title" required /></div>
+        <div><label asp-for="Category" class="block text-sm mb-1"></label><select asp-for="Category" asp-items="Html.GetEnumSelectList<DocumentCategory>()"></select></div>
+        <div><label asp-for="Version" class="block text-sm mb-1"></label><input asp-for="Version" required /></div>
+        <div><label asp-for="Owner" class="block text-sm mb-1"></label><input asp-for="Owner" /></div>
+        <div><label asp-for="NextReviewDate" class="block text-sm mb-1"></label><input asp-for="NextReviewDate" type="date" /></div>
+        <div class="md:col-span-2"><label asp-for="Description" class="block text-sm mb-1"></label><textarea asp-for="Description" rows="2"></textarea></div>
+        <div class="md:col-span-2">
+            <label class="block text-sm mb-1">Remplacer le fichier (PDF, Word, Excel, image — max 20 Mo)</label>
+            <input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" class="p-2" />
+            @if (!string.IsNullOrEmpty(Model.FilePath))
+            {
+                <p class="text-xs text-slate-500 mt-1">Fichier actuel : <a href="@Model.FilePath" target="_blank" class="text-cyan-400">@Model.FileName</a></p>
+            }
+        </div>
+        <div class="md:col-span-2">
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="IsConfidential" value="true" checked="@Model.IsConfidential" /><input type="hidden" name="IsConfidential" value="false" /><span>Document confidentiel</span></label>
+        </div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

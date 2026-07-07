@@ -1,0 +1,302 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Tableau de bord";
+    string LevelColor(int l) => l switch { 1 => "badge-vert", 2 => "badge-ambre", _ => "badge-rouge" };
+    string ColorClass(KpiCardColor c) => c switch {
+        KpiCardColor.Vert => "badge-vert",
+        KpiCardColor.Ambre => "badge-ambre",
+        KpiCardColor.Rouge => "badge-rouge",
+        _ => "badge-bleu"
+    };
+    string ExerciseColorClass(ExerciseColor c) => c switch {
+        ExerciseColor.Vert => "badge-vert",
+        ExerciseColor.Ambre => "badge-ambre",
+        ExerciseColor.Rouge => "badge-rouge",
+        _ => "badge-bleu"
+    };
+    string StatusClass(KpiStatus s) => s switch {
+        KpiStatus.Conforme => "badge-vert",
+        KpiStatus.Attention => "badge-ambre",
+        _ => "badge-rouge"
+    };
+}
+
+@{ var brief = ViewBag.TodayBrief as TodayBriefViewModel; }
+@if (brief is not null)
+{
+    <partial name="_TodayBrief" model="brief" />
+}
+
+<!-- Header summary -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 sm:mb-6">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">@Model.Settings.TerminalTitle</h1>
+        <div class="text-xs sm:text-sm text-slate-400 mt-1">Période : <span class="mono text-cyan-400">@Model.Settings.Period</span></div>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-xs text-slate-500 uppercase">Niveau ISPS</span>
+        <span class="@LevelColor(Model.Settings.IspsLevel) px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold text-base sm:text-lg">N° @Model.Settings.IspsLevel</span>
+        <span class="text-xs text-slate-500 mono ml-auto sm:ml-0" id="clock"></span>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+    @foreach (var k in Model.KpiCards)
+    {
+        <div class="card p-3 sm:p-4">
+            <div class="text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-wider mb-1 sm:mb-2 leading-tight">@k.Label</div>
+            <div class="text-2xl sm:text-3xl font-bold mono text-white mb-1 sm:mb-2">@k.Value</div>
+            <div class="text-[11px] sm:text-xs text-slate-500 mb-2 sm:mb-3 leading-tight">@k.Subtitle</div>
+            <span class="@ColorClass(k.Color) text-[10px] sm:text-[11px] px-2 py-0.5 sm:py-1 rounded-full">@k.TrendBadge</span>
+        </div>
+    }
+</section>
+
+<!-- Agents grid + Gauges -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div class="card p-4 sm:p-5">
+        <div class="flex justify-between items-center mb-3 sm:mb-4">
+            <h3 class="font-semibold text-white text-sm sm:text-base">👮 Effectif Agents</h3>
+            <span class="@(Model.PresentAgents == Model.TotalAgents ? "badge-vert" : Model.PresentAgents >= Model.TotalAgents - 1 ? "badge-ambre" : "badge-rouge") text-xs px-2 py-1 rounded mono">
+                @Model.PresentAgents / @Model.TotalAgents
+            </span>
+        </div>
+        <div class="grid grid-cols-4 sm:grid-cols-6 gap-1.5 sm:gap-2">
+            @foreach (var a in Model.Agents)
+            {
+                <div class="@(a.IsPresent ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400" : "bg-slate-700/30 border-slate-600 text-slate-500") aspect-square border rounded flex flex-col items-center justify-center" title="@a.Name">
+                    <div class="text-base sm:text-xl leading-none">@(a.IsPresent ? "✓" : "✗")</div>
+                    <div class="text-[10px] mono mt-0.5">@a.Position</div>
+                </div>
+            }
+        </div>
+        <div class="mt-3 text-xs text-slate-500 text-center">
+            @(Model.PresentAgents == Model.TotalAgents ? "Effectif complet" : Model.PresentAgents == Model.TotalAgents - 1 ? "1 absent" : "Effectif incomplet")
+        </div>
+    </div>
+
+    <div class="card p-4 sm:p-5 lg:col-span-2">
+        <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">🎯 Indicateurs clés</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            @foreach (var g in Model.Gauges)
+            {
+                <div class="text-center">
+                    <div class="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto">
+                        <canvas class="gauge w-full h-full" data-value="@g.Value" width="96" height="96"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center text-base sm:text-xl font-bold mono text-cyan-400">@g.Value%</div>
+                    </div>
+                    <div class="text-[11px] sm:text-xs text-slate-400 mt-2 leading-tight">@g.Label</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Progress bars -->
+<div class="card p-4 sm:p-5 mb-6 sm:mb-8">
+    <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">📊 Conformité & Reporting</h3>
+    <div class="space-y-3">
+        @foreach (var b in Model.ProgressBars)
+        {
+            <div>
+                <div class="flex justify-between text-xs sm:text-sm mb-1 gap-2">
+                    <span class="text-slate-300 truncate">@b.Label</span>
+                    <span class="mono text-cyan-400 font-semibold flex-shrink-0">@b.Value%</span>
+                </div>
+                <div class="h-2 bg-slate-700 rounded overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded transition-all" style="width: @b.Value%"></div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Exercises -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div class="card p-4 sm:p-5">
+        <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">🏋️ Entraînements (4/an)</h3>
+        <div class="space-y-3">
+            @foreach (var t in Model.Trainings)
+            {
+                <div class="exercise-row p-3 rounded border border-slate-700">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium text-slate-200 text-sm">@t.Exercise.Icon @t.Exercise.Name</div>
+                        <div class="text-xs text-slate-500 mt-1">📅 @t.Exercise.PlannedDate.ToString("dd/MM/yyyy") · 👤 @t.Exercise.Responsible</div>
+                    </div>
+                    <span class="@ExerciseColorClass(t.Color) px-2 py-1 rounded text-xs mono self-start sm:self-center flex-shrink-0">@t.CountdownLabel</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card p-4 sm:p-5">
+        <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">🎯 Exercice Grandeur Nature</h3>
+        @if (Model.GrandNature is not null)
+        {
+            <div class="p-3 sm:p-4 rounded border border-slate-700">
+                <div class="font-medium text-slate-200 mb-2 text-sm">@Model.GrandNature.Exercise.Name</div>
+                <div class="text-xs text-slate-500 mb-2">📅 @Model.GrandNature.Exercise.PlannedDate.ToString("dd/MM/yyyy") · 👤 @Model.GrandNature.Exercise.Responsible</div>
+                <span class="@ExerciseColorClass(Model.GrandNature.Color) px-2 py-1 rounded text-xs mono inline-block mb-2">@Model.GrandNature.CountdownLabel</span>
+                @if (!string.IsNullOrEmpty(Model.GrandNature.Exercise.Observations))
+                {
+                    <div class="text-xs text-slate-400 mt-2 border-t border-slate-700 pt-2 break-words">📝 @Model.GrandNature.Exercise.Observations</div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card p-4 sm:p-5">
+        <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">🚨 Gestion de Crise</h3>
+        <div class="space-y-3">
+            @foreach (var c in Model.CrisisExercises)
+            {
+                <div class="exercise-row p-3 rounded border border-slate-700">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium text-slate-200 text-sm">@c.Exercise.Icon @c.Exercise.Name</div>
+                        <div class="text-xs text-slate-500 mt-1">📅 @c.Exercise.PlannedDate.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <span class="@ExerciseColorClass(c.Color) px-2 py-1 rounded text-xs mono self-start sm:self-center flex-shrink-0">@c.CountdownLabel</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Access passes -->
+<div class="card p-4 sm:p-5 mb-6 sm:mb-8">
+    <div class="flex justify-between items-center mb-3 sm:mb-4">
+        <h3 class="font-semibold text-white text-sm sm:text-base">🪪 Laissez-passer à renouveler</h3>
+        <span class="badge-bleu text-xs px-2 py-1 rounded mono">@Model.ActiveAccessPasses actifs</span>
+    </div>
+    @if (Model.ExpiringAccessPasses.Count == 0)
+    {
+        <p class="text-xs text-slate-500">Aucun laissez-passer à renouveler dans les 30 prochains jours.</p>
+    }
+    else
+    {
+        <div class="space-y-3">
+            @foreach (var p in Model.ExpiringAccessPasses)
+            {
+                <a asp-controller="AccessPass" asp-action="Details" asp-route-id="@p.Pass.Id" class="exercise-row p-3 rounded border border-slate-700 hover:border-cyan-400">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium text-slate-200 text-sm">@p.Pass.Reference — @p.Pass.FullName</div>
+                        <div class="text-xs text-slate-500 mt-1">@p.Pass.Type · fin le @p.Pass.EndDate.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <span class="@ColorClass(p.Color) px-2 py-1 rounded text-xs mono self-start sm:self-center flex-shrink-0">@p.CountdownLabel</span>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<!-- Radar + Table -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div class="card p-4 sm:p-5">
+        <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">🕸️ Score global par catégorie</h3>
+        <div class="relative w-full" style="max-height: 320px">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card p-4 sm:p-5 lg:col-span-2">
+        <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">📋 Tableau détaillé des KPIs (@Model.KpiTable.Count lignes)</h3>
+        <div class="table-wrap max-h-[420px] overflow-y-auto">
+            <table class="w-full text-xs sm:text-sm">
+                <thead class="text-xs uppercase text-slate-400 border-b border-slate-700 sticky top-0 bg-[var(--navy-700)]">
+                    <tr>
+                        <th class="text-left py-2 px-2 sm:px-3">Catégorie</th>
+                        <th class="text-left py-2 px-2 sm:px-3">Indicateur</th>
+                        <th class="text-right py-2 px-2 sm:px-3">Valeur</th>
+                        <th class="text-right py-2 px-2 sm:px-3 hidden sm:table-cell">Objectif</th>
+                        <th class="text-center py-2 px-2 sm:px-3">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.KpiTable)
+                    {
+                        <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+                            <td class="py-2 px-2 sm:px-3 text-slate-400 whitespace-nowrap">@r.Category</td>
+                            <td class="py-2 px-2 sm:px-3 text-slate-200">@r.Indicator</td>
+                            <td class="py-2 px-2 sm:px-3 text-right mono text-cyan-300 whitespace-nowrap">@r.CurrentValue</td>
+                            <td class="py-2 px-2 sm:px-3 text-right mono text-slate-400 whitespace-nowrap hidden sm:table-cell">@r.Target</td>
+                            <td class="py-2 px-2 sm:px-3 text-center">
+                                <span class="@StatusClass(r.Status) px-2 py-0.5 rounded text-[10px] sm:text-xs whitespace-nowrap">@r.Status</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+    <script>
+        const clk = document.getElementById('clock');
+        const tick = () => clk.textContent = new Date().toLocaleTimeString('fr-FR');
+        tick(); setInterval(tick, 1000);
+
+        function drawGauges() {
+            document.querySelectorAll('canvas.gauge').forEach(c => {
+                const rect = c.getBoundingClientRect();
+                const size = Math.round(rect.width * window.devicePixelRatio);
+                c.width = size; c.height = size;
+                const ctx = c.getContext('2d');
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                const v = +c.dataset.value;
+                const cx = rect.width / 2, cy = rect.width / 2, r = rect.width / 2 - 6;
+                ctx.lineWidth = 7; ctx.lineCap = 'round';
+                ctx.strokeStyle = 'rgba(148,163,184,0.18)';
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
+                const grad = ctx.createLinearGradient(0, 0, rect.width, 0);
+                grad.addColorStop(0, '#06b6d4'); grad.addColorStop(1, '#10b981');
+                ctx.strokeStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (v / 100) * 2 * Math.PI);
+                ctx.stroke();
+            });
+        }
+        drawGauges();
+        window.addEventListener('resize', () => { clearTimeout(window._gaugeT); window._gaugeT = setTimeout(drawGauges, 150); });
+
+        const radarData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RadarScores));
+        new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: {
+                labels: Object.keys(radarData),
+                datasets: [{
+                    label: 'Score (%)',
+                    data: Object.values(radarData),
+                    backgroundColor: 'rgba(34,211,238,0.25)',
+                    borderColor: '#22d3ee',
+                    pointBackgroundColor: '#22d3ee',
+                    pointBorderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        beginAtZero: true, max: 100, min: 0,
+                        ticks: { stepSize: 20, color: '#64748b', backdropColor: 'transparent', font: { size: 10 } },
+                        grid: { color: 'rgba(148,163,184,0.15)' },
+                        angleLines: { color: 'rgba(148,163,184,0.2)' },
+                        pointLabels: { color: '#cbd5e1', font: { size: 11 } }
+                    }
+                },
+                plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } }
+            }
+        });
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/dashboard')
+            .withAutomaticReconnect()
+            .build();
+        connection.on('DashboardUpdated', () => setTimeout(() => location.reload(), 600));
+        connection.start().catch(err => console.warn('SignalR:', err));
+    </script>
+}

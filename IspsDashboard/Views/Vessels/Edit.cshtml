@@ -1,0 +1,31 @@
+@model VesselCall
+@{ ViewData["Title"] = "Modifier l'escale"; }
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Escale @Model.Reference</h1></div>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="RowVersion" />
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label asp-for="VesselName" class="block text-sm mb-1"></label><input asp-for="VesselName" required /></div>
+        <div><label asp-for="ImoNumber" class="block text-sm mb-1"></label><input asp-for="ImoNumber" /></div>
+        <div><label asp-for="CallSign" class="block text-sm mb-1"></label><input asp-for="CallSign" /></div>
+        <div><label asp-for="Flag" class="block text-sm mb-1"></label><input asp-for="Flag" /></div>
+        <div><label asp-for="Operator" class="block text-sm mb-1"></label><input asp-for="Operator" /></div>
+        <div><label asp-for="CrewCount" class="block text-sm mb-1"></label><input asp-for="CrewCount" type="number" min="0" /></div>
+        <div><label asp-for="Cso" class="block text-sm mb-1"></label><input asp-for="Cso" /></div>
+        <div><label asp-for="Sso" class="block text-sm mb-1"></label><input asp-for="Sso" /></div>
+        <div><label asp-for="Eta" class="block text-sm mb-1"></label><input asp-for="Eta" type="datetime-local" /></div>
+        <div><label asp-for="Etd" class="block text-sm mb-1"></label><input asp-for="Etd" type="datetime-local" /></div>
+        <div><label asp-for="Berth" class="block text-sm mb-1"></label><input asp-for="Berth" /></div>
+        <div><label asp-for="ShipIspsLevel" class="block text-sm mb-1"></label>
+            <select asp-for="ShipIspsLevel"><option value="1">Niveau 1</option><option value="2">Niveau 2</option><option value="3">Niveau 3</option></select>
+        </div>
+        <div class="md:col-span-2"><label asp-for="LastTenPorts" class="block text-sm mb-1"></label><textarea asp-for="LastTenPorts" rows="2"></textarea></div>
+        <div class="md:col-span-2"><label asp-for="SecurityNotes" class="block text-sm mb-1"></label><textarea asp-for="SecurityNotes" rows="3"></textarea></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

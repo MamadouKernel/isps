@@ -1,0 +1,56 @@
+@model IReadOnlyList<Agent>
+@{
+    ViewData["Title"] = "Personnel sûreté";
+}
+
+<div class="mb-5 flex items-center justify-between gap-3">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">👮 Personnel sûreté</h1>
+        <p class="text-xs sm:text-sm text-slate-400">@Model.Count agent(s) — @Model.Count(a => a.IsPresent) présent(s)</p>
+    </div>
+    <a asp-action="Create" class="btn-primary whitespace-nowrap">+ Ajouter un agent</a>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    @foreach (var a in Model)
+    {
+        var habCount = a.Habilitations.Count;
+        var habExpired = a.Habilitations.Count(h => h.ExpiresAt.Date < DateTime.UtcNow.Date);
+        <a asp-action="Details" asp-route-id="@a.Id" class="card p-4 hover:border-cyan-400 transition block">
+            <div class="flex items-start gap-3">
+                @if (!string.IsNullOrEmpty(a.PhotoPath))
+                {
+                    <img src="@a.PhotoPath" alt="Photo de @a.Name" class="w-14 h-14 rounded-full object-cover border border-slate-700" />
+                }
+                else
+                {
+                    <div class="w-14 h-14 rounded-full bg-slate-700 flex items-center justify-center text-xl text-slate-400">@a.Name.FirstOrDefault()</div>
+                }
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="mono text-cyan-400 text-xs">#@a.Position</span>
+                        <span class="@(a.IsPresent ? "badge-vert" : "badge-rouge") text-[10px] px-2 py-0.5 rounded">
+                            @(a.IsPresent ? "Présent" : "Absent")
+                        </span>
+                    </div>
+                    <div class="text-white font-medium truncate">@a.Name</div>
+                    <div class="text-xs text-slate-400 truncate">@a.Role</div>
+                    @if (!string.IsNullOrEmpty(a.BadgeNumber))
+                    {
+                        <div class="text-[11px] text-slate-500 mono mt-1">Badge @a.BadgeNumber</div>
+                    }
+                </div>
+            </div>
+            @if (habCount > 0)
+            {
+                <div class="mt-3 pt-2 border-t border-slate-700 flex items-center justify-between text-xs">
+                    <span class="text-slate-400">🎓 @habCount habilitation(s)</span>
+                    @if (habExpired > 0)
+                    {
+                        <span class="badge-rouge px-2 py-0.5 rounded text-[10px]">⚠ @habExpired expirée(s)</span>
+                    }
+                </div>
+            }
+        </a>
+    }
+</div>

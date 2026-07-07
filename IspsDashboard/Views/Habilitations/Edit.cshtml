@@ -1,0 +1,21 @@
+@model Habilitation
+@{ ViewData["Title"] = "Modifier l'habilitation"; }
+<div class="mb-5"><h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Habilitation — @Model.Agent?.Name</h1></div>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="AgentId" />
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label asp-for="Category" class="block text-sm mb-1"></label><select asp-for="Category" asp-items="Html.GetEnumSelectList<IspsDashboard.Models.Enums.HabilitationCategory>()"></select></div>
+        <div><label asp-for="Title" class="block text-sm mb-1"></label><input asp-for="Title" required /></div>
+        <div><label asp-for="Issuer" class="block text-sm mb-1"></label><input asp-for="Issuer" /></div>
+        <div><label asp-for="Reference" class="block text-sm mb-1"></label><input asp-for="Reference" /></div>
+        <div><label asp-for="ObtainedAt" class="block text-sm mb-1"></label><input asp-for="ObtainedAt" type="date" /></div>
+        <div><label asp-for="ExpiresAt" class="block text-sm mb-1"></label><input asp-for="ExpiresAt" type="date" /></div>
+    </div>
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-controller="Personnel" asp-action="Details" asp-route-id="@Model.AgentId" class="btn-secondary">Annuler</a>
+        <button class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

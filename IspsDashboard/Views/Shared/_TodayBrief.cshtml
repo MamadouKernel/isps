@@ -1,0 +1,66 @@
+@model TodayBriefViewModel
+@{
+    bool anyAlert = Model.OpenIncidents > 0 || Model.OverduePatrols > 0
+                  || Model.ExpiredHabilitations.Count > 0 || Model.ExpiringHabilitations.Count > 0
+                  || Model.UrgentExercises.Count > 0 || Model.OpenNonConformities.Count > 0
+                  || Model.ExpiringAccessPasses.Count > 0
+                  || Model.CurrentMarsecLevel > 1;
+    string LevelClass(int l) => l switch { 1 => "badge-vert", 2 => "badge-ambre", _ => "badge-rouge" };
+}
+
+<div class="card p-4 sm:p-5 mb-5 border-l-4 @(anyAlert ? "border-amber-500" : "border-emerald-500")">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+        <h2 class="font-bold text-white text-base sm:text-lg flex items-center gap-2">
+            🌅 <span>Mon poste — @DateTime.Now.ToString("dddd dd MMMM yyyy")</span>
+        </h2>
+        <span class="@LevelClass(Model.CurrentMarsecLevel) px-3 py-1 rounded text-xs uppercase tracking-wider font-bold">
+            MARSEC N° @Model.CurrentMarsecLevel
+        </span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
+        <a asp-controller="Incidents" asp-action="Index" class="block p-3 rounded border @(Model.OpenIncidents > 0 ? "border-red-500/40 bg-red-500/10" : "border-slate-700 hover:border-cyan-400")">
+            <div class="text-2xl font-bold mono @(Model.OpenIncidents > 0 ? "text-red-400" : "text-slate-300")">@Model.OpenIncidents</div>
+            <div class="text-[11px] text-slate-400 mt-1">Incidents ouverts</div>
+        </a>
+        <a asp-controller="Visitors" asp-action="Index" class="block p-3 rounded border border-slate-700 hover:border-cyan-400">
+            <div class="text-2xl font-bold mono @(Model.VisitorsOnSite > 0 ? "text-blue-400" : "text-slate-300")">@Model.VisitorsOnSite</div>
+            <div class="text-[11px] text-slate-400 mt-1">Visiteurs sur site</div>
+        </a>
+        <a asp-controller="Patrols" asp-action="Index" class="block p-3 rounded border @(Model.OverduePatrols > 0 ? "border-amber-500/40 bg-amber-500/10" : "border-slate-700 hover:border-cyan-400")">
+            <div class="text-2xl font-bold mono @(Model.OverduePatrols > 0 ? "text-amber-400" : "text-slate-300")">@Model.OverduePatrols</div>
+            <div class="text-[11px] text-slate-400 mt-1">Patrouilles en retard</div>
+        </a>
+        <a asp-controller="Habilitations" asp-action="Index" class="block p-3 rounded border @(Model.ExpiredHabilitations.Count > 0 ? "border-red-500/40 bg-red-500/10" : "border-slate-700 hover:border-cyan-400")">
+            <div class="text-2xl font-bold mono @(Model.ExpiredHabilitations.Count > 0 ? "text-red-400" : "text-slate-300")">@Model.ExpiredHabilitations.Count</div>
+            <div class="text-[11px] text-slate-400 mt-1">Habilitations expirées</div>
+        </a>
+        <a asp-controller="Habilitations" asp-action="Index" class="block p-3 rounded border @(Model.ExpiringHabilitations.Count > 0 ? "border-amber-500/40 bg-amber-500/10" : "border-slate-700 hover:border-cyan-400")">
+            <div class="text-2xl font-bold mono @(Model.ExpiringHabilitations.Count > 0 ? "text-amber-400" : "text-slate-300")">@Model.ExpiringHabilitations.Count</div>
+            <div class="text-[11px] text-slate-400 mt-1">Habilitations à renouveler</div>
+        </a>
+        <a asp-controller="NonConformities" asp-action="Index" class="block p-3 rounded border @(Model.OpenNonConformities.Count > 0 ? "border-amber-500/40" : "border-slate-700 hover:border-cyan-400")">
+            <div class="text-2xl font-bold mono @(Model.OpenNonConformities.Count > 0 ? "text-amber-400" : "text-slate-300")">@Model.OpenNonConformities.Count</div>
+            <div class="text-[11px] text-slate-400 mt-1">Non-conformités ouvertes</div>
+        </a>
+        <a asp-controller="AccessPass" asp-action="Index" class="block p-3 rounded border @(Model.ExpiringAccessPasses.Count > 0 ? "border-amber-500/40 bg-amber-500/10" : "border-slate-700 hover:border-cyan-400")">
+            <div class="text-2xl font-bold mono @(Model.ExpiringAccessPasses.Count > 0 ? "text-amber-400" : "text-slate-300")">@Model.ExpiringAccessPasses.Count</div>
+            <div class="text-[11px] text-slate-400 mt-1">Laissez-passer à renouveler</div>
+        </a>
+    </div>
+
+    @if (Model.UrgentExercises.Count > 0)
+    {
+        <div class="mt-4 pt-3 border-t border-slate-700">
+            <div class="text-xs uppercase text-amber-400 font-semibold mb-2">⏰ Exercices dans les 7 prochains jours</div>
+            <div class="flex flex-wrap gap-2">
+                @foreach (var ex in Model.UrgentExercises)
+                {
+                    <span class="text-xs bg-amber-500/15 border border-amber-500/40 text-amber-300 px-2 py-1 rounded">
+                        @ex.Name — @ex.PlannedDate.ToString("dd/MM")
+                    </span>
+                }
+            </div>
+        </div>
+    }
+</div>

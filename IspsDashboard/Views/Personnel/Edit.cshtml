@@ -1,0 +1,50 @@
+@model Agent
+@{
+    ViewData["Title"] = $"Modifier {Model.Name}";
+}
+
+<div class="mb-5">
+    <h1 class="text-xl sm:text-2xl font-bold text-white">✏️ Modifier l'agent #@Model.Position</h1>
+</div>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Position" />
+    <input type="hidden" asp-for="PhotoPath" />
+
+    <div asp-validation-summary="All" class="text-red-400 text-sm"></div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label asp-for="Name" class="block text-sm mb-1"></label><input asp-for="Name" /></div>
+        <div><label asp-for="Role" class="block text-sm mb-1"></label><input asp-for="Role" /></div>
+        <div><label asp-for="BadgeNumber" class="block text-sm mb-1"></label><input asp-for="BadgeNumber" /></div>
+        <div><label asp-for="HiredAt" class="block text-sm mb-1"></label><input asp-for="HiredAt" type="date" /></div>
+        <div><label asp-for="Phone" class="block text-sm mb-1"></label><input asp-for="Phone" /></div>
+        <div><label asp-for="Email" class="block text-sm mb-1"></label><input asp-for="Email" /></div>
+        <div>
+            <label class="block text-sm mb-1">Photo (JPG/PNG/WEBP, max 3 Mo)</label>
+            <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="p-2" />
+            @if (!string.IsNullOrEmpty(Model.PhotoPath))
+            {
+                <img src="@Model.PhotoPath" alt="Photo actuelle de @Model.Name" class="mt-2 w-16 h-16 rounded-full object-cover" />
+            }
+        </div>
+        <div class="flex items-end">
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="IsPresent" value="true" @(Model.IsPresent ? "checked" : "") />
+                <input type="hidden" name="IsPresent" value="false" />
+                <span>Présent aujourd'hui</span>
+            </label>
+        </div>
+        <div class="md:col-span-2">
+            <label asp-for="Notes" class="block text-sm mb-1"></label>
+            <textarea asp-for="Notes" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary text-center">Annuler</a>
+        <button type="submit" class="btn-primary">✓ Enregistrer</button>
+    </div>
+</form>

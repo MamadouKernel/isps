@@ -1,0 +1,70 @@
+@model Visitor
+@{
+    ViewData["Title"] = Model.FullName;
+    bool canEdit = User.IsInRole(DataSeeder.AdminRole) || User.IsInRole(DataSeeder.EditorRole);
+    string StatusClass(VisitorStatus s) => s switch
+    {
+        VisitorStatus.PreEnregistre => "badge-ambre",
+        VisitorStatus.SurSite => "badge-vert",
+        VisitorStatus.Sorti => "badge-bleu",
+        _ => "badge-rouge"
+    };
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-5">
+    <div>
+        <div class="text-xs text-slate-400 uppercase tracking-wider">Visiteur</div>
+        <div class="flex items-center gap-3 mt-1 flex-wrap">
+            <span class="mono text-2xl text-cyan-400 font-bold">@Model.Reference</span>
+            <span class="@StatusClass(Model.Status) text-xs px-2 py-1 rounded">@Model.Status</span>
+        </div>
+        <h1 class="text-lg sm:text-xl text-white font-semibold mt-2">@Model.FullName <span class="text-sm text-slate-500">@Model.Company</span></h1>
+    </div>
+    <div class="flex gap-2">
+        <a asp-action="Index" class="btn-secondary text-sm">← Retour</a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-secondary text-sm">✏️ Modifier</a>
+            @await Html.PartialAsync("_DeleteButton", new DeleteButtonModel
+            {
+                Controller = "Visitors",
+                RouteValues = { ["id"] = Model.Id.ToString() },
+                ConfirmMessage = "Déplacer ce visiteur vers la corbeille ?"
+            })
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <aside class="card p-5 lg:col-span-1 space-y-2">
+        <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Identité</h3>
+        <dl class="text-sm space-y-2">
+            <div><dt class="text-slate-500 text-xs">Pièce d'identité</dt><dd class="text-slate-200 mono">@Model.IdDocumentNumber</dd></div>
+            <div><dt class="text-slate-500 text-xs">Téléphone</dt><dd class="text-slate-200">@Model.Phone</dd></div>
+            <div><dt class="text-slate-500 text-xs">Véhicule</dt><dd class="text-slate-200 mono">@Model.VehiclePlate</dd></div>
+            <div><dt class="text-slate-500 text-xs">Badge délivré</dt><dd class="text-slate-200 mono">@Model.BadgeIssued</dd></div>
+        </dl>
+    </aside>
+
+    <div class="card p-5 lg:col-span-2 space-y-5">
+        <section>
+            <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Visite</h3>
+            <dl class="text-sm space-y-2">
+                <div><dt class="text-slate-500 text-xs">Motif</dt><dd class="text-slate-200">@Model.Purpose</dd></div>
+                <div><dt class="text-slate-500 text-xs">Personne visitée</dt><dd class="text-slate-200">@Model.Host</dd></div>
+                <div><dt class="text-slate-500 text-xs">Agent escorte</dt><dd class="text-slate-200">@Model.EscortedBy</dd></div>
+                <div><dt class="text-slate-500 text-xs">Arrivée prévue</dt><dd class="text-slate-200 mono">@Model.ScheduledArrival.ToString("dd/MM/yyyy HH:mm")</dd></div>
+                <div><dt class="text-slate-500 text-xs">Départ prévu</dt><dd class="text-slate-200 mono">@(Model.ScheduledDeparture?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd></div>
+                <div><dt class="text-slate-500 text-xs">Entrée réelle</dt><dd class="text-slate-200 mono">@(Model.CheckInAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—") @(!string.IsNullOrEmpty(Model.CheckedInBy) ? $"({Model.CheckedInBy})" : "")</dd></div>
+                <div><dt class="text-slate-500 text-xs">Sortie réelle</dt><dd class="text-slate-200 mono">@(Model.CheckOutAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—") @(!string.IsNullOrEmpty(Model.CheckedOutBy) ? $"({Model.CheckedOutBy})" : "")</dd></div>
+            </dl>
+        </section>
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <section>
+                <h3 class="text-sm uppercase tracking-wider text-cyan-400 mb-2">Notes</h3>
+                <p class="whitespace-pre-wrap text-slate-200 text-sm">@Model.Notes</p>
+            </section>
+        }
+    </div>
+</div>

@@ -1,0 +1,18 @@
+@model RestrictedZone
+
+<div asp-validation-summary="All" class="text-red-400 text-sm mb-3"></div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div><label asp-for="Code" class="block text-sm mb-1"></label><input asp-for="Code" placeholder="ZAR-06" required /></div>
+    <div><label asp-for="Name" class="block text-sm mb-1"></label><input asp-for="Name" required /></div>
+    <div><label asp-for="AccessLevel" class="block text-sm mb-1"></label><select asp-for="AccessLevel" asp-items="Html.GetEnumSelectList<IspsDashboard.Models.Enums.ZoneAccessLevel>()"></select></div>
+    <div><label asp-for="ZoneManager" class="block text-sm mb-1"></label><input asp-for="ZoneManager" /></div>
+    <div class="md:col-span-2"><label asp-for="Description" class="block text-sm mb-1"></label><textarea asp-for="Description" rows="2"></textarea></div>
+    <div class="md:col-span-2"><label asp-for="ProtectionMeasures" class="block text-sm mb-1"></label><textarea asp-for="ProtectionMeasures" rows="3" placeholder="Clôture, contrôle d'accès, CCTV, rondes…"></textarea></div>
+    <div class="md:col-span-2"><label asp-for="AuthorizedPersonnel" class="block text-sm mb-1"></label><textarea asp-for="AuthorizedPersonnel" rows="2" placeholder="Qui est autorisé à pénétrer dans cette zone ?"></textarea></div>
+    <div class="flex flex-wrap gap-4 md:col-span-2">
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="RequiresEscort" value="true" @(Model.RequiresEscort ? "checked" : "") /><input type="hidden" name="RequiresEscort" value="false" /><span>Escorte obligatoire</span></label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="RequiresClearance" value="true" @(Model.RequiresClearance ? "checked" : "") /><input type="hidden" name="RequiresClearance" value="false" /><span>Habilitation requise</span></label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="CctvMonitored" value="true" @(Model.CctvMonitored ? "checked" : "") /><input type="hidden" name="CctvMonitored" value="false" /><span>Vidéosurveillée</span></label>
+    </div>
+</div>

@@ -1,0 +1,21 @@
+@model AccessPass
+@{
+    ViewData["Title"] = "Délivrer un laissez-passer";
+}
+<div class="mb-5">
+    <h1 class="text-xl sm:text-2xl font-bold text-white">🪪 Délivrer un laissez-passer</h1>
+    <p class="text-xs sm:text-sm text-slate-400">Référence générée automatiquement. La date de fin se calcule selon le type choisi.</p>
+</div>
+
+<form asp-action="Create" method="post" class="card p-4 sm:p-6 space-y-4">
+    @Html.AntiForgeryToken()
+    <partial name="_Form" model="Model" />
+    <div class="flex flex-col sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-700">
+        <a asp-action="Index" class="btn-secondary text-center">Annuler</a>
+        <button class="btn-primary">✓ Délivrer</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

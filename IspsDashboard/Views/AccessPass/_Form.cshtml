@@ -1,0 +1,63 @@
+@model AccessPass
+
+<div asp-validation-summary="All" class="text-red-400 text-sm mb-3"></div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+        <label asp-for="Type" class="block text-sm mb-1">Type d'accès</label>
+        <select asp-for="Type" id="passType">
+            <option value="0">Accès journalier</option>
+            <option value="1">Accès trimestriel</option>
+            <option value="2">Accès annuel</option>
+        </select>
+    </div>
+    <div>
+        <label asp-for="Category" class="block text-sm mb-1"></label>
+        <select asp-for="Category" id="passCategory" asp-items="Html.GetEnumSelectList<IspsDashboard.Models.Enums.AccessPassCategory>()"></select>
+    </div>
+
+    <div><label asp-for="LastName" class="block text-sm mb-1"></label><input asp-for="LastName" required /></div>
+    <div><label asp-for="FirstName" class="block text-sm mb-1"></label><input asp-for="FirstName" /></div>
+    <div><label asp-for="Contact" class="block text-sm mb-1"></label><input asp-for="Contact" placeholder="+225 ..." /></div>
+    <div><label asp-for="Email" class="block text-sm mb-1"></label><input asp-for="Email" /></div>
+    <div><label asp-for="Matricule" class="block text-sm mb-1"></label><input asp-for="Matricule" /></div>
+    <div><label asp-for="Company" class="block text-sm mb-1"></label><input asp-for="Company" /></div>
+
+    <div data-vehicle-field>
+        <label asp-for="Plate" class="block text-sm mb-1"></label>
+        <input asp-for="Plate" placeholder="AB-1234-CD" />
+    </div>
+
+    <div><label asp-for="IssueDate" class="block text-sm mb-1"></label><input asp-for="IssueDate" id="issueDate" type="date" required /></div>
+    <div><label asp-for="EndDate" class="block text-sm mb-1"></label><input asp-for="EndDate" id="endDate" type="date" required /></div>
+
+    <div class="md:col-span-2"><label asp-for="Notes" class="block text-sm mb-1"></label><textarea asp-for="Notes" rows="2"></textarea></div>
+</div>
+
+<script>
+        // Calcul auto de la date de fin selon le type + mise en avant champ véhicule
+        (function () {
+            const type = document.getElementById('passType');
+            const cat = document.getElementById('passCategory');
+            const issue = document.getElementById('issueDate');
+            const end = document.getElementById('endDate');
+            const vehField = document.querySelector('[data-vehicle-field]');
+
+            function recomputeEnd() {
+                if (!issue.value) return;
+                const d = new Date(issue.value);
+                const t = +type.value;
+                if (t === 0) d.setDate(d.getDate() + 1);
+                else if (t === 1) d.setMonth(d.getMonth() + 3);
+                else d.setFullYear(d.getFullYear() + 1);
+                end.value = d.toISOString().slice(0, 10);
+            }
+            function toggleVehicle() {
+                vehField.style.opacity = (+cat.value === 1) ? '1' : '0.5';
+            }
+            type.addEventListener('change', recomputeEnd);
+            issue.addEventListener('change', recomputeEnd);
+            cat.addEventListener('change', toggleVehicle);
+            toggleVehicle();
+        })();
+</script>

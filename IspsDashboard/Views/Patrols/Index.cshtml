@@ -1,0 +1,98 @@
+@{
+    ViewData["Title"] = "Patrouilles & checkpoints";
+    var checkpoints = ViewBag.Checkpoints as IReadOnlyList<Checkpoint> ?? new List<Checkpoint>();
+    var recent = ViewBag.Recent as IReadOnlyList<PatrolScan> ?? new List<PatrolScan>();
+    var lastBy = ViewBag.LastByCheckpoint as IReadOnlyDictionary<int, DateTime?> ?? new Dictionary<int, DateTime?>();
+    var overdue = ViewBag.Overdue as IReadOnlyList<CheckpointOverdue> ?? new List<CheckpointOverdue>();
+    string FmtRelative(DateTime? when)
+    {
+        if (when is null) return "Jamais";
+        var mins = (int)(DateTime.UtcNow - when.Value).TotalMinutes;
+        if (mins < 60) return $"il y a {mins} min";
+        if (mins < 1440) return $"il y a {mins / 60} h";
+        return $"il y a {mins / 1440} j";
+    }
+}
+
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">🚶 Patrouilles & checkpoints</h1>
+        <p class="text-xs sm:text-sm text-slate-400">Sessions de ronde — les agents scannent les QR codes sur le terrain</p>
+    </div>
+    <a asp-action="QrSheet" class="btn-secondary text-center text-sm" target="_blank">📄 Planche QR à imprimer</a>
+</div>
+
+@if (overdue.Count > 0)
+{
+    <div class="card p-4 mb-5 border-l-4 border-amber-500">
+        <h3 class="font-semibold text-amber-400 text-sm uppercase mb-3">⚠ @overdue.Count checkpoint(s) en retard</h3>
+        <div class="space-y-2">
+            @foreach (var o in overdue)
+            {
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+                    <span class="text-slate-200"><span class="mono text-cyan-400">@o.Checkpoint.Code</span> · @o.Checkpoint.Label</span>
+                    <span class="text-amber-300 mono text-xs">Dernier passage : @FmtRelative(o.LastScannedAt) (cible: @o.Checkpoint.TargetIntervalMinutes min)</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class="card p-4 sm:p-5">
+        <h3 class="font-semibold text-cyan-400 mb-3 text-sm uppercase">Checkpoints actifs (@checkpoints.Count)</h3>
+        <div class="space-y-2">
+            @foreach (var c in checkpoints)
+            {
+                lastBy.TryGetValue(c.Id, out var last);
+                var mins = last is null ? int.MaxValue : (int)(DateTime.UtcNow - last.Value).TotalMinutes;
+                var late = mins > c.TargetIntervalMinutes;
+                <div class="flex items-center justify-between border @(late ? "border-amber-500/40" : "border-slate-700") rounded p-3 gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="mono text-cyan-400 text-xs">@c.Code</span>
+                            <span class="text-slate-500 text-xs">@c.Zone</span>
+                        </div>
+                        <div class="text-sm text-slate-200 mt-1">@c.Label</div>
+                        <div class="text-xs text-slate-500 mt-1">Cible: tous les @c.TargetIntervalMinutes min · Dernier : @FmtRelative(last)</div>
+                    </div>
+                    <a asp-action="Scan" asp-route-code="@c.Code" class="btn-secondary text-xs whitespace-nowrap">📷 Scanner</a>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card p-4 sm:p-5">
+        <h3 class="font-semibold text-cyan-400 mb-3 text-sm uppercase">📜 Journal des derniers passages</h3>
+        @if (recent.Count == 0)
+        {
+            <p class="text-slate-400 text-sm">Aucun passage enregistré pour le moment.</p>
+        }
+        else
+        {
+            <div class="space-y-2 max-h-[500px] overflow-y-auto">
+                @foreach (var s in recent)
+                {
+                    <div class="border @(s.AnomalyType is null ? "border-slate-700" : "border-red-500/40 bg-red-500/5") rounded p-2">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="min-w-0">
+                                <span class="mono text-cyan-400 text-xs">@s.Checkpoint?.Code</span>
+                                <span class="text-sm text-slate-200 ml-1">@s.Checkpoint?.Label</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 mono whitespace-nowrap">@s.ScannedAt.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                        </div>
+                        <div class="text-xs text-slate-400 mt-1">par @s.AgentLabel</div>
+                        @if (s.AnomalyType is not null)
+                        {
+                            <div class="text-xs text-red-300 mt-1">⚠ @s.AnomalyType</div>
+                        }
+                        @if (!string.IsNullOrEmpty(s.Observations))
+                        {
+                            <div class="text-xs text-slate-300 mt-1 italic">"@s.Observations"</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
