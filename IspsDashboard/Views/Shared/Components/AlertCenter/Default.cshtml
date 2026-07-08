@@ -15,7 +15,7 @@
             <span class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center @(Model.CriticalCount > 0 ? "bg-red-500 text-white" : "bg-amber-500 text-black")">@Model.TotalCount</span>
         }
     </button>
-    <div class="dd-panel" style="min-width: 340px; max-height: 70vh; overflow-y: auto;">
+    <div class="dd-panel !min-w-[340px] max-h-[70vh] overflow-y-auto">
         <div class="dd-section flex items-center justify-between">
             <span>Notifications</span>
             <span class="text-slate-400">@Model.TotalCount alerte(s)</span>

@@ -105,7 +105,7 @@
                     <span class="mono text-cyan-400 font-semibold flex-shrink-0">@b.Value%</span>
                 </div>
                 <div class="h-2 bg-slate-700 rounded overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded transition-all" style="width: @b.Value%"></div>
+                    <div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded transition-all" data-bar-width="@b.Value"></div>
                 </div>
             </div>
         }
@@ -194,7 +194,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
     <div class="card p-4 sm:p-5">
         <h3 class="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">🕸️ Score global par catégorie</h3>
-        <div class="relative w-full" style="max-height: 320px">
+        <div class="relative w-full max-h-[320px]">
             <canvas id="radarChart"></canvas>
         </div>
     </div>

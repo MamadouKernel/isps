@@ -252,7 +252,7 @@
             @Html.AntiForgeryToken()
             <p class="text-xs text-slate-500 sm:hidden mb-2">↔️ Faites défiler horizontalement pour voir toutes les colonnes</p>
             <div class="table-wrap max-h-[60vh] overflow-y-auto">
-                <table class="w-full text-xs sm:text-sm" style="min-width: 800px">
+                <table class="w-full text-xs sm:text-sm !min-w-[800px]">
                     <thead class="text-xs text-slate-400 sticky top-0 bg-[var(--navy-700)]">
                         <tr>
                             <th class="text-left p-2">Catégorie</th>
@@ -324,7 +324,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <h4 class="font-semibold text-cyan-400 mb-2">Logo actuel</h4>
-                <div class="card p-6 flex items-center justify-center bg-white" style="min-height: 160px">
+                <div class="card p-6 flex items-center justify-center bg-white min-h-[160px]">
                     <img src="@logoUrl?v=@DateTime.Now.Ticks" alt="Logo CIT" class="max-h-32 w-auto" />
                 </div>
                 <p class="text-xs text-slate-500 mt-2">Le logo s'affiche dans l'en-tête, l'écran de connexion et le favicon.</p>

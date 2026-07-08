@@ -13,4 +13,10 @@
             window.location = rowEl.getAttribute('data-href');
         }
     });
+
+    // Largeur des barres de progression : fixée via la CSSOM (non concernée par
+    // Content-Security-Policy: style-src) plutôt qu'un attribut style="" inline.
+    document.querySelectorAll('[data-bar-width]').forEach(function (el) {
+        el.style.width = el.getAttribute('data-bar-width') + '%';
+    });
 })();

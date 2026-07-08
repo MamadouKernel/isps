@@ -18,6 +18,22 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: IspsDashboard/package-lock.json
+
+      - name: Rebuild Tailwind CSS and fail if it drifted from the committed file
+        working-directory: IspsDashboard
+        shell: bash
+        run: |
+          npm ci
+          npx tailwindcss -i wwwroot/css/tailwind-src.css -o wwwroot/css/tailwind.css --minify
+          git diff --exit-code -- wwwroot/css/tailwind.css || (
+            echo "::error::wwwroot/css/tailwind.css is out of date — a Tailwind class was added/changed in a .cshtml file without rebuilding the CSS. Run 'npx tailwindcss -i wwwroot/css/tailwind-src.css -o wwwroot/css/tailwind.css --minify' from IspsDashboard/ and commit the result." && exit 1)
+
       - name: Restore
         run: dotnet restore
 

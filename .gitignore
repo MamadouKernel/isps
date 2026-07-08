@@ -25,6 +25,10 @@ logs/
 # User-uploaded content (photos, documents) — not source, not meant for version control
 **/wwwroot/uploads/
 
+# Node (Tailwind CLI build tooling)
+node_modules/
+npm-debug.log*
+
 # OS cruft
 .DS_Store
 Thumbs.db

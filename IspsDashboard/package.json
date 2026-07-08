@@ -1,0 +1,14 @@
+{
+  "name": "ispsdashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build CSS Tailwind pour le tableau de bord Sûreté ISPS — Côte d'Ivoire Terminal.",
+  "scripts": {
+    "build:css": "tailwindcss -i wwwroot/css/tailwind-src.css -o wwwroot/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i wwwroot/css/tailwind-src.css -o wwwroot/css/tailwind.css --watch"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

@@ -17,10 +17,11 @@ Application web de sûreté portuaire conforme au **Code ISPS** (International S
 | Tâches planifiées | **Quartz.NET** (alertes exercices J-30 / J-7, 08:00 Abidjan) |
 | Emails | **MailKit** (SMTP configurable en BDD, mot de passe chiffré) |
 | PDF | **QuestPDF** (rapport mensuel sûreté) |
-| Front | Razor + **Tailwind CSS** (CDN) + **Chart.js** |
+| Front | Razor + **Tailwind CSS** (build compilé, voir §2 bis) + **Chart.js** |
+| Sécurité HTTP | CSP par nonce (aucun `unsafe-inline`), X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
 | Logs | **Serilog** (console + fichier rotatif quotidien `logs/`) |
 | Mobile | **PWA** installable (manifest + service worker) |
-| Tests | **xUnit** (73 tests) + EF Core InMemory |
+| Tests | **xUnit** (85 tests) + EF Core InMemory |
 
 Architecture en couches dans un seul projet :
 ```
@@ -51,6 +52,19 @@ IspsDashboard/
 - **SQL Server 2022** (ou Express) accessible
 - **Production sur IIS** : Windows Server + IIS + le **.NET 9 Hosting Bundle** (module ASP.NET Core)
 - (Optionnel) un serveur SMTP pour les alertes email
+- **Node.js 20+** — uniquement pour recompiler le CSS Tailwind après avoir ajouté/modifié des classes dans les vues (voir §2 bis). Pas nécessaire pour lancer l'appli telle quelle : le CSS compilé (`wwwroot/css/tailwind.css`) est déjà versionné.
+
+### 2 bis. CSS Tailwind — build compilé, pas de CDN
+
+L'appli n'utilise **plus** le CDN "Play" de Tailwind (`cdn.tailwindcss.com`) — il est incompatible avec une politique CSP stricte (`style-src` sans `unsafe-inline`) et déconseillé par Tailwind lui-même en production. À la place, `wwwroot/css/tailwind.css` est un fichier **compilé et versionné**, généré depuis `wwwroot/css/tailwind-src.css` en scannant les classes utilisées dans `Views/**/*.cshtml` (`tailwind.config.js`).
+
+**Après toute modification de classes Tailwind dans une vue**, recompiler avant de committer :
+```bash
+cd IspsDashboard
+npm install          # une seule fois
+npm run build:css    # régénère wwwroot/css/tailwind.css
+```
+La CI (`.github/workflows/ci.yml`) échoue automatiquement si `tailwind.css` n'a pas été régénéré après un changement de classes — c'est le filet de sécurité si ce réflexe est oublié.
 
 ---
 
@@ -213,7 +227,7 @@ Le plus simple sur IIS : ajouter une **liaison HTTPS au site IIS** (certificat g
 cd IspsDashboard.Tests
 dotnet test
 ```
-73 tests unitaires couvrant la logique métier critique (codes couleur exercices, scores radar, expiration habilitations et laissez-passer, références séquentielles, score de conformité audit, chiffrement des secrets, etc.).
+85 tests unitaires couvrant la logique métier critique (codes couleur exercices, scores radar, expiration habilitations et laissez-passer, références séquentielles, score de conformité audit, chiffrement des secrets, etc.), ainsi que des tests de régression dédiés : assignation de masse (10 services) et concurrence optimiste (RowVersion).
 
 ---
 

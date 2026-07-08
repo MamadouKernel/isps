@@ -203,14 +203,15 @@ try
         if (useHttps) app.UseHsts();
     }
 
-    // En-têtes de sécurité de base. script-src utilise un nonce par requête (aucun
-    // 'unsafe-inline') : tous les <script> inline de l'appli portent nonce="@Context.Items[...]",
-    // et les gestionnaires onclick="" ont été remplacés par des attributs data-confirm/data-href
-    // + écoute déléguée dans wwwroot/js/interactions.js. Note honnête : style-src garde
-    // 'unsafe-inline' — le CDN "Play" de Tailwind injecte un <style> au runtime et l'appli utilise
-    // encore des attributs style="" pour les barres/jauges dynamiques ; l'éliminer demanderait de
-    // migrer vers un build Tailwind compilé, un changement d'architecture hors du périmètre de
-    // ce correctif.
+    // En-têtes de sécurité de base. Ni script-src ni style-src n'autorisent 'unsafe-inline' :
+    // - script-src : nonce par requête, porté par tous les <script> inline ; les gestionnaires
+    //   onclick="" ont été remplacés par des attributs data-confirm/data-href + écoute déléguée
+    //   dans wwwroot/js/interactions.js.
+    // - style-src : Tailwind est désormais un build compilé (wwwroot/css/tailwind.css, voir
+    //   tailwind.config.js) au lieu du CDN "Play" qui injectait du CSS au runtime ; le seul
+    //   <style> inline restant (styles applicatifs statiques dans _Layout.cshtml) porte le même
+    //   nonce ; la seule largeur dynamique (barres de progression) est posée via la CSSOM en JS
+    //   plutôt qu'un attribut style="".
     app.Use(async (context, next) =>
     {
         var nonce = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
@@ -222,8 +223,8 @@ try
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         headers["Content-Security-Policy"] =
             "default-src 'self'; " +
-            $"script-src 'self' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+            $"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; " +
+            $"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data:; " +
             "connect-src 'self' wss: https://cdn.jsdelivr.net; " +
