@@ -50,7 +50,7 @@
                     @foreach (var v in upcoming)
                     {
                         <tr class="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer"
-                            onclick="location='@Url.Action("Details", new { id = v.Id })'">
+                            data-href="@Url.Action("Details", new { id = v.Id })">
                             <td class="p-2 mono text-cyan-400">@v.Reference</td>
                             <td class="p-2 text-slate-200">@v.VesselName <span class="text-xs text-slate-500">(@v.ImoNumber)</span></td>
                             <td class="p-2 text-slate-400">@v.Flag</td>
@@ -82,7 +82,7 @@
                 <tbody>
                     @foreach (var v in filtered)
                     {
-                        <tr class="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer" onclick="location='@Url.Action("Details", new { id = v.Id })'">
+                        <tr class="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer" data-href="@Url.Action("Details", new { id = v.Id })">
                             <td class="p-2 mono text-cyan-400">@v.Reference</td>
                             <td class="p-2 text-slate-200">@v.VesselName</td>
                             <td class="p-2 mono text-slate-400 whitespace-nowrap">@v.Eta.ToString("dd/MM") → @(v.Etd?.ToString("dd/MM") ?? "—")</td>

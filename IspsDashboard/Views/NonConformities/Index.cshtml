@@ -45,7 +45,7 @@
                     @foreach (var nc in Model)
                     {
                         <tr class="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer"
-                            onclick="location='@Url.Action("Details", new { id = nc.Id })'">
+                            data-href="@Url.Action("Details", new { id = nc.Id })">
                             <td class="p-2 mono text-cyan-400">@nc.Reference</td>
                             <td class="p-2 text-slate-200">@nc.Title</td>
                             <td class="p-2 text-slate-400">@nc.Source</td>

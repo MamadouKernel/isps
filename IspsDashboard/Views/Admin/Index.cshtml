@@ -72,7 +72,7 @@
                         }
                     </select>
                     <button type="submit" form="delCard@(Model.KpiCards[i].Id)" class="btn-danger text-xs"
-                            onclick="return confirm('Supprimer cette carte KPI ?')">✕ Suppr.</button>
+                            data-confirm="Supprimer cette carte KPI ?">✕ Suppr.</button>
                 </div>
             }
             <div class="flex justify-end"><button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer les modifications</button></div>
@@ -118,7 +118,7 @@
                             <input name="gauges[@i].Label" value="@Model.Gauges[i].Label" class="col-span-2" />
                             <input name="gauges[@i].Value" value="@Model.Gauges[i].Value" type="number" min="0" max="100" />
                             <button type="submit" form="delGauge@(Model.Gauges[i].Id)" class="btn-danger text-xs"
-                                    onclick="return confirm('Supprimer cette jauge ?')">✕</button>
+                                    data-confirm="Supprimer cette jauge ?">✕</button>
                         </div>
                     }
                     <button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer jauges</button>
@@ -153,7 +153,7 @@
                             <input name="bars[@i].Label" value="@Model.ProgressBars[i].Label" class="col-span-2" />
                             <input name="bars[@i].Value" value="@Model.ProgressBars[i].Value" type="number" min="0" max="100" />
                             <button type="submit" form="delBar@(Model.ProgressBars[i].Id)" class="btn-danger text-xs"
-                                    onclick="return confirm('Supprimer cette barre ?')">✕</button>
+                                    data-confirm="Supprimer cette barre ?">✕</button>
                         </div>
                     }
                     <button type="submit" class="btn-primary w-full sm:w-auto">✓ Appliquer barres</button>
@@ -199,7 +199,7 @@
                             <span>Présent</span>
                         </label>
                         <button type="submit" form="delAgent@(Model.Agents[i].Id)" class="btn-danger text-xs flex-shrink-0"
-                                onclick="return confirm('Retirer cette position du tableau de garde ?')">✕</button>
+                                data-confirm="Retirer cette position du tableau de garde ?">✕</button>
                     </div>
                 }
             </div>
@@ -283,7 +283,7 @@
                                 </td>
                                 <td class="p-1 text-right">
                                     <button type="submit" form="delRow@(Model.KpiTable[i].Id)" class="btn-danger text-xs"
-                                            onclick="return confirm('Supprimer cet indicateur ?')">✕</button>
+                                            data-confirm="Supprimer cet indicateur ?">✕</button>
                                 </td>
                             </tr>
                         }
@@ -431,7 +431,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

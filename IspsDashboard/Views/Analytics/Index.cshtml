@@ -23,7 +23,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthLabels));
         const gridColor = 'rgba(148,163,184,0.12)';
         const tickColor = '#94a3b8';

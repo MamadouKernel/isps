@@ -233,7 +233,7 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         const clk = document.getElementById('clock');
         const tick = () => clk.textContent = new Date().toLocaleTimeString('fr-FR');
         tick(); setInterval(tick, 1000);

@@ -34,7 +34,7 @@
     <div class="md:col-span-2"><label asp-for="Notes" class="block text-sm mb-1"></label><textarea asp-for="Notes" rows="2"></textarea></div>
 </div>
 
-<script>
+<script nonce="@Context.Items["csp-nonce"]">
         // Calcul auto de la date de fin selon le type + mise en avant champ véhicule
         (function () {
             const type = document.getElementById('passType');

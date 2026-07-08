@@ -203,20 +203,26 @@ try
         if (useHttps) app.UseHsts();
     }
 
-    // En-têtes de sécurité de base. Note honnête : 'unsafe-inline' reste nécessaire pour
-    // script-src/style-src tant que l'appli utilise des <script>/style="" inline et le CDN
-    // "Play" de Tailwind (compilation JS côté navigateur) — ça n'élimine pas tout risque XSS,
-    // mais ça bloque l'exfiltration vers un domaine externe et, surtout, l'intégration de
-    // l'appli dans un <iframe> tiers (frame-ancestors 'none').
+    // En-têtes de sécurité de base. script-src utilise un nonce par requête (aucun
+    // 'unsafe-inline') : tous les <script> inline de l'appli portent nonce="@Context.Items[...]",
+    // et les gestionnaires onclick="" ont été remplacés par des attributs data-confirm/data-href
+    // + écoute déléguée dans wwwroot/js/interactions.js. Note honnête : style-src garde
+    // 'unsafe-inline' — le CDN "Play" de Tailwind injecte un <style> au runtime et l'appli utilise
+    // encore des attributs style="" pour les barres/jauges dynamiques ; l'éliminer demanderait de
+    // migrer vers un build Tailwind compilé, un changement d'architecture hors du périmètre de
+    // ce correctif.
     app.Use(async (context, next) =>
     {
+        var nonce = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+        context.Items["csp-nonce"] = nonce;
+
         var headers = context.Response.Headers;
         headers["X-Frame-Options"] = "DENY";
         headers["X-Content-Type-Options"] = "nosniff";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         headers["Content-Security-Policy"] =
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
+            $"script-src 'self' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data:; " +

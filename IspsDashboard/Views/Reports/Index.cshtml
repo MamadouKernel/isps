@@ -41,7 +41,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         document.getElementById('downloadBtn').addEventListener('click', () => {
             const y = document.getElementById('year').value;
             const m = document.getElementById('month').value;

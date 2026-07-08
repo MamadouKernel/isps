@@ -59,7 +59,7 @@
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <a asp-action="Scan" asp-route-code="@c.Code" class="btn-secondary text-xs whitespace-nowrap">📷 Scanner</a>
                         <button type="submit" form="delCheckpoint@(c.Id)" class="btn-danger text-xs"
-                                onclick="return confirm('Retirer ce checkpoint ?')">✕</button>
+                                data-confirm="Retirer ce checkpoint ?">✕</button>
                     </div>
                 </div>
             }

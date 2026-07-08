@@ -43,7 +43,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(p => {
                 document.getElementById('lat').value = p.coords.latitude.toFixed(6);

@@ -111,4 +111,116 @@ public class MassAssignmentSecurityTests
         Assert.Equal(string.Empty, saved.ClosureEvidence);
         Assert.False(saved.IsDeleted);
     }
+
+    [Fact]
+    public async Task RestrictedZoneCreate_ShouldIgnoreAttackerSuppliedStatusAndIsDeleted()
+    {
+        var db = Db();
+        var service = new RestrictedZoneService(db, new TestHelpers.NoOpAuditService());
+
+        var forged = new RestrictedZone
+        {
+            Code = "ZAR-99",
+            Name = "Zone test",
+            Status = ZoneStatus.Verrouillee,
+            IsDeleted = true
+        };
+
+        var saved = await service.CreateAsync(forged);
+
+        Assert.Equal(ZoneStatus.Active, saved.Status);
+        Assert.False(saved.IsDeleted);
+    }
+
+    [Fact]
+    public async Task CameraCreate_ShouldIgnoreAttackerSuppliedIsDeleted()
+    {
+        var db = Db();
+        var service = new CameraService(db, new TestHelpers.NoOpAuditService());
+
+        var forged = new Camera
+        {
+            Code = "CCTV-99",
+            Label = "Caméra test",
+            Status = CameraStatus.HorsService,
+            IsDeleted = true
+        };
+
+        var saved = await service.CreateAsync(forged);
+
+        // Le statut fait partie des champs légitimes à la création (pas de workflow dédié
+        // comme ChangeStatusAsync pour Vessel/Incident) ; seul IsDeleted doit être neutralisé.
+        Assert.False(saved.IsDeleted);
+    }
+
+    [Fact]
+    public async Task VesselCreate_ShouldIgnoreAttackerSuppliedStatusAndActualArrival()
+    {
+        var db = Db();
+        var service = new VesselService(db, new TestHelpers.FixedClock(DateTime.UtcNow), new TestHelpers.NoOpAuditService());
+
+        var forged = new VesselCall
+        {
+            VesselName = "MSC Test",
+            Eta = DateTime.UtcNow.AddDays(1),
+            Status = VesselCallStatus.Parti,
+            ActualArrival = DateTime.UtcNow,
+            ActualDeparture = DateTime.UtcNow,
+            IsDeleted = true
+        };
+
+        var saved = await service.CreateAsync(forged);
+
+        Assert.Equal(VesselCallStatus.Annonce, saved.Status);
+        Assert.Null(saved.ActualArrival);
+        Assert.Null(saved.ActualDeparture);
+        Assert.False(saved.IsDeleted);
+    }
+
+    [Fact]
+    public async Task BriefingCreate_ShouldIgnoreAttackerSuppliedAcknowledgement()
+    {
+        var db = Db();
+        var service = new BriefingService(db, new TestHelpers.NoOpAuditService());
+
+        var forged = new ShiftBriefing
+        {
+            ShiftDate = DateTime.UtcNow.Date,
+            AcknowledgedByIncoming = true,
+            AcknowledgedAt = DateTime.UtcNow,
+            IsDeleted = true
+        };
+
+        var saved = await service.CreateAsync(forged);
+
+        Assert.False(saved.AcknowledgedByIncoming);
+        Assert.Null(saved.AcknowledgedAt);
+        Assert.False(saved.IsDeleted);
+    }
+
+    [Fact]
+    public async Task ContactCreate_ShouldIgnoreAttackerSuppliedIsDeleted()
+    {
+        var db = Db();
+        var service = new ContactService(db, new TestHelpers.NoOpAuditService());
+
+        var forged = new ExternalContact { Name = "Contact test", IsDeleted = true };
+
+        var saved = await service.CreateAsync(forged);
+
+        Assert.False(saved.IsDeleted);
+    }
+
+    [Fact]
+    public async Task VehicleAccessCreate_ShouldIgnoreAttackerSuppliedIsDeleted()
+    {
+        var db = Db();
+        var service = new VehicleAccessService(db, new TestHelpers.FixedClock(DateTime.UtcNow), new TestHelpers.NoOpAuditService());
+
+        var forged = new VehicleAccess { Plate = "CI-TEST-01", IsDeleted = true };
+
+        var saved = await service.CreateAsync(forged);
+
+        Assert.False(saved.IsDeleted);
+    }
 }

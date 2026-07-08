@@ -343,7 +343,7 @@
         <div class="toast fixed top-20 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 px-4 py-3 rounded-lg shadow-lg">
             ✓ @s
         </div>
-        <script>setTimeout(() => document.querySelector('.toast')?.remove(), 3500);</script>
+        <script nonce="@Context.Items["csp-nonce"]">setTimeout(() => document.querySelector('.toast')?.remove(), 3500);</script>
     }
     @if (TempData["Error"] is string e)
     {
@@ -356,7 +356,7 @@
         @RenderBody()
     </main>
 
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         // Dropdowns au clic : ouverture exclusive, fermeture au clic extérieur / Escape
         (function () {
             const dds = Array.from(document.querySelectorAll('[data-dd]'));
@@ -374,7 +374,7 @@
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dds.forEach(d => d.classList.remove('open')); });
         })();
     </script>
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         (function () {
             const burger = document.getElementById('burger');
             const menu = document.getElementById('mobileMenu');
@@ -392,8 +392,9 @@
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/interactions.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
-    <script>
+    <script nonce="@Context.Items["csp-nonce"]">
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
         }

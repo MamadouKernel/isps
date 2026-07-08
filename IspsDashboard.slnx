@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="IspsDashboard.Tests/IspsDashboard.Tests.csproj" />
+  <Project Path="IspsDashboard/IspsDashboard.csproj" />
+</Solution>
