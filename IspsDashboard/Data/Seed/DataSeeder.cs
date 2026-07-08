@@ -17,7 +17,13 @@ public static class DataSeeder
         RoleManager<IdentityRole> roleManager,
         IConfiguration configuration)
     {
-        await db.Database.MigrateAsync();
+        // Les migrations sont écrites pour SQL Server (production/dev) ; les tests d'intégration
+        // tournent sur SQLite en mémoire, incompatible avec le rejeu de ces migrations telles
+        // quelles — on y crée le schéma directement depuis le modèle courant à la place.
+        if (db.Database.IsSqlServer())
+            await db.Database.MigrateAsync();
+        else
+            await db.Database.EnsureCreatedAsync();
 
         // Toujours : structure minimale indispensable au fonctionnement du compte admin.
         await SeedRolesAsync(roleManager);

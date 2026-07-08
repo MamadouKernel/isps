@@ -290,3 +290,7 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Rend la classe Program accessible à WebApplicationFactory<Program> pour les tests
+// d'intégration (le modèle "top-level statements" la génère internal par défaut).
+public partial class Program { }
