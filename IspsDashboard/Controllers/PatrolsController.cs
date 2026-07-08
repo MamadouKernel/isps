@@ -11,12 +11,35 @@ public class PatrolsController : Controller
     private readonly IPatrolService _patrols;
     private readonly IBadgePdfService _badgePdf;
     private readonly IAuditService _audit;
+    private readonly ISoftDeleteService _softDelete;
 
-    public PatrolsController(IPatrolService patrols, IBadgePdfService badgePdf, IAuditService audit)
+    public PatrolsController(IPatrolService patrols, IBadgePdfService badgePdf, IAuditService audit, ISoftDeleteService softDelete)
     {
         _patrols = patrols;
         _badgePdf = badgePdf;
         _audit = audit;
+        _softDelete = softDelete;
+    }
+
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Policy = "RequireEditor")]
+    public async Task<IActionResult> AddCheckpoint(string code, string label, string? zone, int targetIntervalMinutes = 240)
+    {
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(label))
+        {
+            TempData["Error"] = "Code et libellé sont obligatoires.";
+            return RedirectToAction(nameof(Index));
+        }
+        await _patrols.CreateCheckpointAsync(code, label, zone, targetIntervalMinutes);
+        TempData["Success"] = $"Checkpoint {code} ajouté.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Policy = "RequireEditor")]
+    public async Task<IActionResult> DeleteCheckpoint(int id)
+    {
+        await _softDelete.DeleteAsync<Checkpoint>(id, User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+        TempData["Success"] = "Checkpoint retiré (corbeille).";
+        return RedirectToAction(nameof(Index));
     }
 
     /// <summary>Planche PDF des QR codes des checkpoints, à imprimer et coller sur le terrain.</summary>

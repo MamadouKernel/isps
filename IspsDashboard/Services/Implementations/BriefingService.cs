@@ -35,17 +35,26 @@ public sealed class BriefingService : IBriefingService
 
     public async Task<ShiftBriefing> CreateAsync(ShiftBriefing input)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.OutgoingAgent = input.OutgoingAgent?.Trim() ?? string.Empty;
-        input.IncomingAgent = input.IncomingAgent?.Trim() ?? string.Empty;
-        input.EventsSummary = input.EventsSummary?.Trim() ?? string.Empty;
-        input.AttentionPoints = input.AttentionPoints?.Trim() ?? string.Empty;
-        input.StandingOrders = input.StandingOrders?.Trim() ?? string.Empty;
-        _db.ShiftBriefings.Add(input);
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync) :
+        // AcknowledgedByIncoming/AcknowledgedAt ne doivent jamais venir du formulaire de création,
+        // sous peine de contourner le vrai accusé de réception (action Acknowledge).
+        var entity = new ShiftBriefing
+        {
+            ShiftDate = input.ShiftDate,
+            Slot = input.Slot,
+            OutgoingAgent = input.OutgoingAgent?.Trim() ?? string.Empty,
+            IncomingAgent = input.IncomingAgent?.Trim() ?? string.Empty,
+            CurrentMarsecLevel = input.CurrentMarsecLevel,
+            EventsSummary = input.EventsSummary?.Trim() ?? string.Empty,
+            AttentionPoints = input.AttentionPoints?.Trim() ?? string.Empty,
+            StandingOrders = input.StandingOrders?.Trim() ?? string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.ShiftBriefings.Add(entity);
         await _db.SaveChangesAsync();
         await _audit.LogAsync("CreateShiftBriefing",
-            $"{input.ShiftDate:yyyy-MM-dd} / {input.Slot} — {input.OutgoingAgent} → {input.IncomingAgent}");
-        return input;
+            $"{entity.ShiftDate:yyyy-MM-dd} / {entity.Slot} — {entity.OutgoingAgent} → {entity.IncomingAgent}");
+        return entity;
     }
 
     public async Task<bool> UpdateAsync(ShiftBriefing input, byte[] rowVersion)

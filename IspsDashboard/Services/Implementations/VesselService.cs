@@ -43,20 +43,33 @@ public sealed class VesselService : IVesselService
 
     public async Task<VesselCall> CreateAsync(VesselCall input)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.ImoNumber = input.ImoNumber?.Trim() ?? string.Empty;
-        input.CallSign = input.CallSign?.Trim() ?? string.Empty;
-        input.Flag = input.Flag?.Trim() ?? string.Empty;
-        input.Operator = input.Operator?.Trim() ?? string.Empty;
-        input.Cso = input.Cso?.Trim() ?? string.Empty;
-        input.Sso = input.Sso?.Trim() ?? string.Empty;
-        input.Berth = input.Berth?.Trim() ?? string.Empty;
-        input.SecurityNotes = input.SecurityNotes?.Trim() ?? string.Empty;
-        input.LastTenPorts = input.LastTenPorts?.Trim() ?? string.Empty;
-        _db.VesselCalls.Add(input);
-        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => input.Reference = r, () => NextVesselReference(input.Eta.Year));
-        await _audit.LogAsync("CreateVesselCall", $"{input.Reference} — {input.VesselName} (IMO {input.ImoNumber})");
-        return input;
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync) :
+        // ActualArrival/ActualDeparture et Status ne doivent jamais venir d'un formulaire de
+        // création, sous peine de fabriquer une escale déjà "arrivée/partie" sans jamais passer
+        // par ChangeStatusAsync ni son audit.
+        var entity = new VesselCall
+        {
+            VesselName = input.VesselName.Trim(),
+            ImoNumber = input.ImoNumber?.Trim() ?? string.Empty,
+            CallSign = input.CallSign?.Trim() ?? string.Empty,
+            Flag = input.Flag?.Trim() ?? string.Empty,
+            Operator = input.Operator?.Trim() ?? string.Empty,
+            Cso = input.Cso?.Trim() ?? string.Empty,
+            Sso = input.Sso?.Trim() ?? string.Empty,
+            ShipIspsLevel = input.ShipIspsLevel,
+            Eta = input.Eta,
+            Etd = input.Etd,
+            Berth = input.Berth?.Trim() ?? string.Empty,
+            Status = VesselCallStatus.Annonce,
+            SecurityNotes = input.SecurityNotes?.Trim() ?? string.Empty,
+            LastTenPorts = input.LastTenPorts?.Trim() ?? string.Empty,
+            CrewCount = input.CrewCount,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.VesselCalls.Add(entity);
+        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => entity.Reference = r, () => NextVesselReference(entity.Eta.Year));
+        await _audit.LogAsync("CreateVesselCall", $"{entity.Reference} — {entity.VesselName} (IMO {entity.ImoNumber})");
+        return entity;
     }
 
     public async Task<bool> UpdateAsync(VesselCall input, byte[] rowVersion)

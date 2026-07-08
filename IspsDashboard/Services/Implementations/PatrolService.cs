@@ -27,6 +27,23 @@ public sealed class PatrolService : IPatrolService
     public Task<Checkpoint?> GetByCodeAsync(string code)
         => _db.Checkpoints.FirstOrDefaultAsync(c => c.Code == code && c.IsActive);
 
+    public async Task<Checkpoint> CreateCheckpointAsync(string code, string label, string? zone, int targetIntervalMinutes)
+    {
+        var entity = new Checkpoint
+        {
+            Code = code.Trim(),
+            Label = label.Trim(),
+            Zone = zone?.Trim() ?? string.Empty,
+            TargetIntervalMinutes = targetIntervalMinutes > 0 ? targetIntervalMinutes : 240,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.Checkpoints.Add(entity);
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync("AddCheckpoint", $"{entity.Code} — {entity.Label}");
+        return entity;
+    }
+
     public async Task<PatrolScan> RecordScanAsync(
         string checkpointCode, string agentLabel, int? agentId,
         string? observations, double? latitude, double? longitude, string? anomalyType)

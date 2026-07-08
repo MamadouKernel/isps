@@ -27,16 +27,27 @@ public sealed class RestrictedZoneService : IRestrictedZoneService
 
     public async Task<RestrictedZone> CreateAsync(RestrictedZone input)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.UpdatedAt = DateTime.UtcNow;
-        input.Description = input.Description?.Trim() ?? string.Empty;
-        input.ProtectionMeasures = input.ProtectionMeasures?.Trim() ?? string.Empty;
-        input.AuthorizedPersonnel = input.AuthorizedPersonnel?.Trim() ?? string.Empty;
-        input.ZoneManager = input.ZoneManager?.Trim() ?? string.Empty;
-        _db.RestrictedZones.Add(input);
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync).
+        var entity = new RestrictedZone
+        {
+            Code = input.Code.Trim(),
+            Name = input.Name.Trim(),
+            AccessLevel = input.AccessLevel,
+            Status = ZoneStatus.Active,
+            Description = input.Description?.Trim() ?? string.Empty,
+            ProtectionMeasures = input.ProtectionMeasures?.Trim() ?? string.Empty,
+            AuthorizedPersonnel = input.AuthorizedPersonnel?.Trim() ?? string.Empty,
+            ZoneManager = input.ZoneManager?.Trim() ?? string.Empty,
+            RequiresEscort = input.RequiresEscort,
+            RequiresClearance = input.RequiresClearance,
+            CctvMonitored = input.CctvMonitored,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _db.RestrictedZones.Add(entity);
         await _db.SaveChangesAsync();
-        await _audit.LogAsync("CreateRestrictedZone", $"{input.Code} — {input.Name}");
-        return input;
+        await _audit.LogAsync("CreateRestrictedZone", $"{entity.Code} — {entity.Name}");
+        return entity;
     }
 
     public async Task<bool> UpdateAsync(RestrictedZone input, byte[] rowVersion)
@@ -74,9 +85,12 @@ public sealed class RestrictedZoneService : IRestrictedZoneService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        // Soft-delete, cohérent avec ISoftDeletable : un _db.Remove(...) direct ici contredirait
+        // le filtre global EF Core et rendrait la zone irrécupérable depuis la Corbeille.
         var zone = await _db.RestrictedZones.FirstOrDefaultAsync(z => z.Id == id);
         if (zone is null) return false;
-        _db.RestrictedZones.Remove(zone);
+        zone.IsDeleted = true;
+        zone.DeletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("DeleteRestrictedZone", zone.Code);
         return true;

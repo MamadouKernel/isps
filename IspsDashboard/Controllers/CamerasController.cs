@@ -63,10 +63,18 @@ public class CamerasController : Controller
     {
         if (id != input.Id) return BadRequest();
         if (!ModelState.IsValid) return View(input);
-        var ok = await _cameras.UpdateAsync(input);
-        if (!ok) return NotFound();
-        TempData["Success"] = "Caméra mise à jour.";
-        return RedirectToAction(nameof(Details), new { id });
+        try
+        {
+            var ok = await _cameras.UpdateAsync(input, input.RowVersion ?? Array.Empty<byte>());
+            if (!ok) return NotFound();
+            TempData["Success"] = "Caméra mise à jour.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            ModelState.AddModelError(string.Empty, "Modifié entre-temps par un autre utilisateur. Rechargez la page.");
+            return View(input);
+        }
     }
 
     [HttpPost, ValidateAntiForgeryToken, Authorize(Policy = "RequireEditor")]

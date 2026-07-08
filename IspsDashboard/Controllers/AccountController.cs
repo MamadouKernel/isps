@@ -38,14 +38,15 @@ public class AccountController : Controller
         if (result.Succeeded)
         {
             await _audit.LogAsync("Login", $"Connexion de {model.Email}");
-            return Redirect(model.ReturnUrl ?? Url.Action("Index", "Dashboard")!);
+            if (Url.IsLocalUrl(model.ReturnUrl))
+                return Redirect(model.ReturnUrl!);
+            return RedirectToAction("Index", "Dashboard");
         }
 
-        if (result.IsLockedOut)
-            ModelState.AddModelError(string.Empty, "Compte verrouillé. Réessayez dans 15 minutes.");
-        else
-            ModelState.AddModelError(string.Empty, "Email ou mot de passe incorrect.");
-
+        // Message volontairement identique que le compte existe ou non, et qu'il soit verrouillé
+        // ou non : un message différencié (ex. « compte verrouillé ») permettrait à un attaquant
+        // de déterminer par tâtonnement quelles adresses email correspondent à un compte réel.
+        ModelState.AddModelError(string.Empty, "Email ou mot de passe incorrect.");
         return View(model);
     }
 

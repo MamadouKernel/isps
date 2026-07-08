@@ -90,7 +90,7 @@ public class BriefingsController : Controller
         }
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Policy = "RequireEditor")]
     public async Task<IActionResult> Acknowledge(int id)
     {
         await _briefings.AcknowledgeAsync(id, User.Identity?.Name ?? "system");

@@ -42,19 +42,29 @@ public sealed class AccessPassService : IAccessPassService
 
     public async Task<AccessPass> CreateAsync(AccessPass input)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.FirstName = input.FirstName?.Trim() ?? string.Empty;
-        input.Contact = input.Contact?.Trim() ?? string.Empty;
-        input.Matricule = input.Matricule?.Trim() ?? string.Empty;
-        input.Email = input.Email?.Trim() ?? string.Empty;
-        input.Plate = input.Plate?.Trim() ?? string.Empty;
-        input.Company = input.Company?.Trim() ?? string.Empty;
-        input.IssuedBy = input.IssuedBy?.Trim() ?? string.Empty;
-        input.Notes = input.Notes?.Trim() ?? string.Empty;
-        _db.AccessPasses.Add(input);
-        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => input.Reference = r, () => NextReference(input.IssueDate.Year));
-        await _audit.LogAsync("CreateAccessPass", $"{input.Reference} — {input.FullName} ({input.Type})");
-        return input;
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync
+        // pour le pourquoi) : Revoked/IsDeleted ne doivent jamais venir du formulaire de création.
+        var entity = new AccessPass
+        {
+            Type = input.Type,
+            Category = input.Category,
+            LastName = input.LastName.Trim(),
+            FirstName = input.FirstName?.Trim() ?? string.Empty,
+            Contact = input.Contact?.Trim() ?? string.Empty,
+            Matricule = input.Matricule?.Trim() ?? string.Empty,
+            Email = input.Email?.Trim() ?? string.Empty,
+            Plate = input.Plate?.Trim() ?? string.Empty,
+            Company = input.Company?.Trim() ?? string.Empty,
+            IssueDate = input.IssueDate,
+            EndDate = input.EndDate,
+            IssuedBy = input.IssuedBy?.Trim() ?? string.Empty,
+            Notes = input.Notes?.Trim() ?? string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.AccessPasses.Add(entity);
+        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => entity.Reference = r, () => NextReference(entity.IssueDate.Year));
+        await _audit.LogAsync("CreateAccessPass", $"{entity.Reference} — {entity.FullName} ({entity.Type})");
+        return entity;
     }
 
     public async Task<bool> UpdateAsync(AccessPass input, byte[] rowVersion)

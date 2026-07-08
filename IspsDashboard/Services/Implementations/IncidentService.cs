@@ -108,6 +108,13 @@ public sealed class IncidentService : IIncidentService
             entity.ClosedAt = DateTime.UtcNow;
             entity.ClosedById = userId;
         }
+        else
+        {
+            // Réouverture (ou tout autre statut) : effacer une éventuelle date de clôture
+            // obsolète, sinon l'incident continue d'afficher "Clos le ..." après réouverture.
+            entity.ClosedAt = null;
+            entity.ClosedById = null;
+        }
         await _db.SaveChangesAsync();
         await _audit.LogAsync("ChangeIncidentStatus", $"{entity.Reference} → {newStatus}");
         return true;

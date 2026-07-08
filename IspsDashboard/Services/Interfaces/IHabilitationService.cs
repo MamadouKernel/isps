@@ -5,7 +5,7 @@ namespace IspsDashboard.Services.Interfaces;
 public interface IHabilitationService
 {
     Task<Habilitation> CreateAsync(int agentId, Habilitation input);
-    Task<int> UpdateAsync(Habilitation input);
+    Task<int> UpdateAsync(Habilitation input, byte[] rowVersion);
     Task<Habilitation?> GetByIdAsync(int id);
     Task<bool> DeleteAsync(int id);
     Task<IReadOnlyList<Habilitation>> GetAllAsync();

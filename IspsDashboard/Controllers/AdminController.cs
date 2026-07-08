@@ -64,18 +64,23 @@ public class AdminController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var allowed = new[] { ".svg", ".png", ".jpg", ".jpeg", ".webp" };
+        // SVG volontairement exclu des formats acceptés en upload : un SVG peut embarquer du
+        // <script>, exécuté si le fichier est ouvert directement (hors balise <img>, ex. lien
+        // partagé ou <iframe> depuis un site tiers) — le logo par défaut fourni avec l'appli
+        // reste en SVG (non uploadé, donc fiable), seuls les remplacements sont restreints.
+        var allowed = new[] { ".png", ".jpg", ".jpeg", ".webp" };
         var ext = Path.GetExtension(logoFile.FileName).ToLowerInvariant();
         if (!allowed.Contains(ext))
         {
-            TempData["Error"] = "Format non supporté. Acceptés : SVG, PNG, JPG, WEBP.";
+            TempData["Error"] = "Format non supporté. Acceptés : PNG, JPG, WEBP.";
             return RedirectToAction(nameof(Index));
         }
 
         var imagesDir = Path.Combine(_env.WebRootPath, "images");
         Directory.CreateDirectory(imagesDir);
 
-        foreach (var ex in allowed)
+        // Supprime aussi un éventuel logo.svg résiduel d'un ancien upload (avant ce correctif).
+        foreach (var ex in allowed.Append(".svg"))
         {
             var existing = Path.Combine(imagesDir, "logo" + ex);
             if (System.IO.File.Exists(existing)) System.IO.File.Delete(existing);
@@ -372,10 +377,19 @@ public class AdminController : Controller
         {
             var entity = await _db.Agents.FindAsync(input.Id);
             if (entity is null) continue;
+            _db.Entry(entity).Property(nameof(Agent.RowVersion)).OriginalValue = input.RowVersion ?? Array.Empty<byte>();
             entity.Name = input.Name;
             entity.IsPresent = input.IsPresent;
         }
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            TempData["Error"] = "Effectif non enregistré : une position a été modifiée entre-temps par un autre utilisateur. Rechargez la page.";
+            return RedirectToAction(nameof(Index));
+        }
         await _audit.LogAsync("UpdateAgents", $"Présents: {agents.Count(a => a.IsPresent)}/{agents.Count}");
         await NotifyDashboardChanged();
         TempData["Success"] = "Effectif agents enregistré.";

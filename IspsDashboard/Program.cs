@@ -34,6 +34,9 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // Ne pas annoncer la stack serveur (Kestrel) dans l'en-tête HTTP "Server".
+    builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
@@ -77,6 +80,13 @@ try
         // Le cookie suit le protocole de la requête : fonctionne en HTTP comme en HTTPS.
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
+
+    // Intervalle de re-validation du "security stamp" : par défaut Identity ne revérifie le
+    // rôle/verrouillage d'un utilisateur déjà connecté que toutes les 30 minutes. Réduit ici
+    // pour qu'une rétrogradation ou une suppression de compte (Administration → Utilisateurs)
+    // coupe une session active en quelques minutes plutôt qu'en une demi-heure.
+    builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+        options.ValidationInterval = TimeSpan.FromMinutes(5));
 
     builder.Services.AddAuthorization(options =>
     {
@@ -193,13 +203,54 @@ try
         if (useHttps) app.UseHsts();
     }
 
+    // En-têtes de sécurité de base. Note honnête : 'unsafe-inline' reste nécessaire pour
+    // script-src/style-src tant que l'appli utilise des <script>/style="" inline et le CDN
+    // "Play" de Tailwind (compilation JS côté navigateur) — ça n'élimine pas tout risque XSS,
+    // mais ça bloque l'exfiltration vers un domaine externe et, surtout, l'intégration de
+    // l'appli dans un <iframe> tiers (frame-ancestors 'none').
+    app.Use(async (context, next) =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Frame-Options"] = "DENY";
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+            "font-src 'self' https://fonts.gstatic.com; " +
+            "img-src 'self' data:; " +
+            "connect-src 'self' wss: https://cdn.jsdelivr.net; " +
+            "object-src 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self'; " +
+            "frame-ancestors 'none';";
+        await next();
+    });
+
     app.UseRequestLocalization();
     app.UseSerilogRequestLogging();
     if (useHttps) app.UseHttpsRedirection();
+
+    // Authentification avant les fichiers statiques (mais pas l'autorisation, qui a besoin du
+    // routage) : les fichiers sous wwwroot/uploads (pièces jointes incidents, documents PFSP,
+    // photos agents) ne doivent pas être consultables sans être connecté — contrairement au
+    // reste des fichiers statiques (logo, CSS, JS) qui doivent rester joignables depuis la page
+    // de connexion elle-même, avant toute authentification.
+    app.UseAuthentication();
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/uploads") && context.User.Identity?.IsAuthenticated != true)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+        await next();
+    });
+
     app.UseStaticFiles();
     app.UseRouting();
 
-    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllerRoute(

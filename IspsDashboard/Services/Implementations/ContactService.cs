@@ -31,18 +31,25 @@ public sealed class ContactService : IContactService
 
     public async Task<ExternalContact> CreateAsync(ExternalContact input)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.Role = input.Role?.Trim() ?? string.Empty;
-        input.PrimaryPhone = input.PrimaryPhone?.Trim() ?? string.Empty;
-        input.EmergencyPhone = input.EmergencyPhone?.Trim() ?? string.Empty;
-        input.Email = input.Email?.Trim() ?? string.Empty;
-        input.Address = input.Address?.Trim() ?? string.Empty;
-        input.RadioChannel = input.RadioChannel?.Trim() ?? string.Empty;
-        input.Notes = input.Notes?.Trim() ?? string.Empty;
-        _db.ExternalContacts.Add(input);
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync).
+        var entity = new ExternalContact
+        {
+            Name = input.Name.Trim(),
+            Type = input.Type,
+            Role = input.Role?.Trim() ?? string.Empty,
+            PrimaryPhone = input.PrimaryPhone?.Trim() ?? string.Empty,
+            EmergencyPhone = input.EmergencyPhone?.Trim() ?? string.Empty,
+            Email = input.Email?.Trim() ?? string.Empty,
+            Address = input.Address?.Trim() ?? string.Empty,
+            RadioChannel = input.RadioChannel?.Trim() ?? string.Empty,
+            IsEmergency24x7 = input.IsEmergency24x7,
+            Notes = input.Notes?.Trim() ?? string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.ExternalContacts.Add(entity);
         await _db.SaveChangesAsync();
-        await _audit.LogAsync("CreateExternalContact", $"{input.Type} — {input.Name}");
-        return input;
+        await _audit.LogAsync("CreateExternalContact", $"{entity.Type} — {entity.Name}");
+        return entity;
     }
 
     public async Task<bool> UpdateAsync(ExternalContact input)
@@ -66,9 +73,11 @@ public sealed class ContactService : IContactService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        // Soft-delete, cohérent avec ISoftDeletable (voir RestrictedZoneService.DeleteAsync).
         var entity = await _db.ExternalContacts.FirstOrDefaultAsync(c => c.Id == id);
         if (entity is null) return false;
-        _db.ExternalContacts.Remove(entity);
+        entity.IsDeleted = true;
+        entity.DeletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("DeleteExternalContact", entity.Name);
         return true;

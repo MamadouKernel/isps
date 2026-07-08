@@ -35,20 +35,31 @@ public sealed class NonConformityService : INonConformityService
 
     public async Task<NonConformity> CreateAsync(NonConformity input)
     {
-        input.Status = NonConformityStatus.Identifiee;
-        input.CreatedAt = DateTime.UtcNow;
-        input.CorrectiveAction = input.CorrectiveAction?.Trim() ?? string.Empty;
-        input.Owner = input.Owner?.Trim() ?? string.Empty;
-        _db.NonConformities.Add(input);
-        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => input.Reference = r, () => NextReference(input.IdentifiedAt.Year));
-        await _audit.LogAsync("CreateNonConformity", $"{input.Reference} — {input.Title}");
-        return input;
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync) :
+        // ClosedAt/ClosureEvidence ne doivent jamais venir du formulaire de création.
+        var entity = new NonConformity
+        {
+            Title = input.Title.Trim(),
+            Source = input.Source,
+            Status = NonConformityStatus.Identifiee,
+            Description = input.Description.Trim(),
+            CorrectiveAction = input.CorrectiveAction?.Trim() ?? string.Empty,
+            Owner = input.Owner?.Trim() ?? string.Empty,
+            IdentifiedAt = input.IdentifiedAt,
+            DueDate = input.DueDate,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.NonConformities.Add(entity);
+        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => entity.Reference = r, () => NextReference(entity.IdentifiedAt.Year));
+        await _audit.LogAsync("CreateNonConformity", $"{entity.Reference} — {entity.Title}");
+        return entity;
     }
 
-    public async Task<bool> UpdateAsync(NonConformity input)
+    public async Task<bool> UpdateAsync(NonConformity input, byte[] rowVersion)
     {
         var e = await _db.NonConformities.FirstOrDefaultAsync(n => n.Id == input.Id);
         if (e is null) return false;
+        _db.Entry(e).Property(nameof(NonConformity.RowVersion)).OriginalValue = rowVersion;
         e.Title = input.Title.Trim();
         e.Source = input.Source;
         e.Description = input.Description?.Trim() ?? string.Empty;

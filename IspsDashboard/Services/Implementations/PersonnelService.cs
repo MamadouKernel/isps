@@ -45,10 +45,11 @@ public sealed class PersonnelService : IPersonnelService
         return agent;
     }
 
-    public async Task<bool> UpdateAsync(Agent input)
+    public async Task<bool> UpdateAsync(Agent input, byte[] rowVersion)
     {
         var existing = await _db.Agents.FirstOrDefaultAsync(a => a.Id == input.Id);
         if (existing is null) return false;
+        _db.Entry(existing).Property(nameof(Agent.RowVersion)).OriginalValue = rowVersion;
 
         existing.Name = input.Name.Trim();
         existing.IsPresent = input.IsPresent;
@@ -58,6 +59,7 @@ public sealed class PersonnelService : IPersonnelService
         existing.HiredAt = input.HiredAt;
         existing.Role = input.Role?.Trim() ?? "Agent de sûreté";
         existing.Notes = input.Notes?.Trim() ?? string.Empty;
+        existing.PhotoPath = input.PhotoPath ?? existing.PhotoPath;
 
         await _db.SaveChangesAsync();
         await _audit.LogAsync("UpdatePersonnel", $"Agent #{existing.Position} — {existing.Name}");

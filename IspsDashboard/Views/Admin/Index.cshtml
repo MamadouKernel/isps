@@ -190,6 +190,7 @@
                     <div class="flex items-center gap-2 border border-slate-700 p-2 rounded">
                         <input type="hidden" name="agents[@i].Id" value="@Model.Agents[i].Id" />
                         <input type="hidden" name="agents[@i].Position" value="@Model.Agents[i].Position" />
+                        <input type="hidden" name="agents[@i].RowVersion" value="@Convert.ToBase64String(Model.Agents[i].RowVersion ?? Array.Empty<byte>())" />
                         <span class="mono text-cyan-400 w-8 flex-shrink-0">#@Model.Agents[i].Position</span>
                         <input name="agents[@i].Name" value="@Model.Agents[i].Name" class="flex-1 min-w-0" />
                         <label class="flex items-center gap-1 text-xs flex-shrink-0">

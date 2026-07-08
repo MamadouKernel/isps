@@ -85,10 +85,18 @@ public class AuditsController : Controller
         if (id != input.Id) return BadRequest();
         ModelState.Remove(nameof(SecurityAudit.Reference));
         if (!ModelState.IsValid) return View(input);
-        var ok = await _audits.UpdateHeaderAsync(input);
-        if (!ok) return NotFound();
-        TempData["Success"] = "Audit mis à jour.";
-        return RedirectToAction(nameof(Details), new { id });
+        try
+        {
+            var ok = await _audits.UpdateHeaderAsync(input, input.RowVersion ?? Array.Empty<byte>());
+            if (!ok) return NotFound();
+            TempData["Success"] = "Audit mis à jour.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            ModelState.AddModelError(string.Empty, "Modifié entre-temps par un autre utilisateur. Rechargez la page.");
+            return View(input);
+        }
     }
 
     [HttpPost, ValidateAntiForgeryToken, Authorize(Policy = "RequireEditor")]

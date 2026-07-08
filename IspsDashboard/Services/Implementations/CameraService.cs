@@ -28,21 +28,30 @@ public sealed class CameraService : ICameraService
 
     public async Task<Camera> CreateAsync(Camera input)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.Zone = input.Zone?.Trim() ?? string.Empty;
-        input.Model = input.Model?.Trim() ?? string.Empty;
-        input.IpAddress = input.IpAddress?.Trim() ?? string.Empty;
-        input.Notes = input.Notes?.Trim() ?? string.Empty;
-        _db.Cameras.Add(input);
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync).
+        var entity = new Camera
+        {
+            Code = input.Code.Trim(),
+            Label = input.Label.Trim(),
+            Zone = input.Zone?.Trim() ?? string.Empty,
+            Type = input.Type,
+            Status = input.Status,
+            Model = input.Model?.Trim() ?? string.Empty,
+            IpAddress = input.IpAddress?.Trim() ?? string.Empty,
+            Notes = input.Notes?.Trim() ?? string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.Cameras.Add(entity);
         await _db.SaveChangesAsync();
-        await _audit.LogAsync("CreateCamera", $"{input.Code} — {input.Label}");
-        return input;
+        await _audit.LogAsync("CreateCamera", $"{entity.Code} — {entity.Label}");
+        return entity;
     }
 
-    public async Task<bool> UpdateAsync(Camera input)
+    public async Task<bool> UpdateAsync(Camera input, byte[] rowVersion)
     {
         var existing = await _db.Cameras.FirstOrDefaultAsync(c => c.Id == input.Id);
         if (existing is null) return false;
+        _db.Entry(existing).Property(nameof(Camera.RowVersion)).OriginalValue = rowVersion;
         existing.Label = input.Label.Trim();
         existing.Zone = input.Zone?.Trim() ?? string.Empty;
         existing.Type = input.Type;

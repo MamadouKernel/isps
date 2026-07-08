@@ -93,9 +93,17 @@ public class PersonnelController : Controller
             input.PhotoPath = existing?.PhotoPath ?? string.Empty;
         }
 
-        var ok = await _personnel.UpdateAsync(input);
-        if (!ok) return NotFound();
-        TempData["Success"] = "Profil mis à jour.";
-        return RedirectToAction(nameof(Details), new { id });
+        try
+        {
+            var ok = await _personnel.UpdateAsync(input, input.RowVersion ?? Array.Empty<byte>());
+            if (!ok) return NotFound();
+            TempData["Success"] = "Profil mis à jour.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            ModelState.AddModelError(string.Empty, "Modifié entre-temps par un autre utilisateur. Rechargez la page.");
+            return View(input);
+        }
     }
 }

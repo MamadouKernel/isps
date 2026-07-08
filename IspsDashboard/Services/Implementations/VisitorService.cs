@@ -51,19 +51,30 @@ public sealed class VisitorService : IVisitorService
 
     public async Task<Visitor> CreateAsync(Visitor input)
     {
-        input.Status = VisitorStatus.PreEnregistre;
-        input.CreatedAt = DateTime.UtcNow;
-        input.Company = input.Company?.Trim() ?? string.Empty;
-        input.IdDocumentNumber = input.IdDocumentNumber?.Trim() ?? string.Empty;
-        input.Phone = input.Phone?.Trim() ?? string.Empty;
-        input.VehiclePlate = input.VehiclePlate?.Trim() ?? string.Empty;
-        input.Host = input.Host?.Trim() ?? string.Empty;
-        input.EscortedBy = input.EscortedBy?.Trim() ?? string.Empty;
-        input.Notes = input.Notes?.Trim() ?? string.Empty;
-        _db.Visitors.Add(input);
-        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => input.Reference = r, () => NextReference(input.ScheduledArrival.Year));
-        await _audit.LogAsync("CreateVisitor", $"{input.Reference} — {input.FullName}");
-        return input;
+        // Entité neuve à partir des seuls champs légitimes d'une pré-inscription : ne jamais
+        // persister input tel quel (voir AuditCampaignService.CreateAsync pour le pourquoi) —
+        // sinon un champ de formulaire ajouté peut forger un check-in/check-out déjà effectué,
+        // ou masquer instantanément le visiteur via IsDeleted.
+        var entity = new Visitor
+        {
+            FullName = input.FullName.Trim(),
+            Company = input.Company?.Trim() ?? string.Empty,
+            IdDocumentNumber = input.IdDocumentNumber?.Trim() ?? string.Empty,
+            Phone = input.Phone?.Trim() ?? string.Empty,
+            VehiclePlate = input.VehiclePlate?.Trim() ?? string.Empty,
+            ScheduledArrival = input.ScheduledArrival,
+            ScheduledDeparture = input.ScheduledDeparture,
+            Purpose = input.Purpose.Trim(),
+            Host = input.Host?.Trim() ?? string.Empty,
+            EscortedBy = input.EscortedBy?.Trim() ?? string.Empty,
+            Status = VisitorStatus.PreEnregistre,
+            Notes = input.Notes?.Trim() ?? string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.Visitors.Add(entity);
+        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => entity.Reference = r, () => NextReference(entity.ScheduledArrival.Year));
+        await _audit.LogAsync("CreateVisitor", $"{entity.Reference} — {entity.FullName}");
+        return entity;
     }
 
     public async Task<bool> UpdateAsync(Visitor input, byte[] rowVersion)

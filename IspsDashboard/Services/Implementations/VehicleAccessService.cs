@@ -55,21 +55,31 @@ public sealed class VehicleAccessService : IVehicleAccessService
 
     public async Task<VehicleAccess> CreateAsync(VehicleAccess input)
     {
-        if (input.OccurredAt == default) input.OccurredAt = DateTime.UtcNow;
-        var year = input.OccurredAt.Year;
-        input.DriverName = input.DriverName?.Trim() ?? string.Empty;
-        input.DriverIdNumber = input.DriverIdNumber?.Trim() ?? string.Empty;
-        input.Carrier = input.Carrier?.Trim() ?? string.Empty;
-        input.ContainerNumber = input.ContainerNumber?.Trim() ?? string.Empty;
-        input.SealNumber = input.SealNumber?.Trim() ?? string.Empty;
-        input.BookingReference = input.BookingReference?.Trim() ?? string.Empty;
-        input.Controller = input.Controller?.Trim() ?? string.Empty;
-        input.Gate = input.Gate?.Trim() ?? string.Empty;
-        input.Notes = input.Notes?.Trim() ?? string.Empty;
-        _db.VehicleAccesses.Add(input);
-        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => input.Reference = r, () => NextReference(year));
-        await _audit.LogAsync("VehicleAccess", $"{input.Reference} — {input.Plate} ({input.Direction}, {input.Result})");
-        return input;
+        // Entité neuve à partir des seuls champs légitimes (voir AuditCampaignService.CreateAsync).
+        var occurredAt = input.OccurredAt == default ? DateTime.UtcNow : input.OccurredAt;
+        var entity = new VehicleAccess
+        {
+            Plate = input.Plate.Trim(),
+            Type = input.Type,
+            Direction = input.Direction,
+            Result = input.Result,
+            DriverName = input.DriverName?.Trim() ?? string.Empty,
+            DriverIdNumber = input.DriverIdNumber?.Trim() ?? string.Empty,
+            Carrier = input.Carrier?.Trim() ?? string.Empty,
+            ContainerNumber = input.ContainerNumber?.Trim() ?? string.Empty,
+            SealNumber = input.SealNumber?.Trim() ?? string.Empty,
+            SealVerified = input.SealVerified,
+            BookingReference = input.BookingReference?.Trim() ?? string.Empty,
+            Searched = input.Searched,
+            Controller = input.Controller?.Trim() ?? string.Empty,
+            Gate = input.Gate?.Trim() ?? string.Empty,
+            OccurredAt = occurredAt,
+            Notes = input.Notes?.Trim() ?? string.Empty
+        };
+        _db.VehicleAccesses.Add(entity);
+        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => entity.Reference = r, () => NextReference(occurredAt.Year));
+        await _audit.LogAsync("VehicleAccess", $"{entity.Reference} — {entity.Plate} ({entity.Direction}, {entity.Result})");
+        return entity;
     }
 
     public Task<VehicleAccess?> GetByIdAsync(int id)

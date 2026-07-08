@@ -6,6 +6,7 @@ public interface IPatrolService
 {
     Task<IReadOnlyList<Checkpoint>> GetActiveCheckpointsAsync();
     Task<Checkpoint?> GetByCodeAsync(string code);
+    Task<Checkpoint> CreateCheckpointAsync(string code, string label, string? zone, int targetIntervalMinutes);
     Task<PatrolScan> RecordScanAsync(string checkpointCode, string agentLabel, int? agentId,
         string? observations, double? latitude, double? longitude, string? anomalyType);
     Task<IReadOnlyList<PatrolScan>> GetRecentScansAsync(int take = 20);

@@ -51,7 +51,16 @@ public class HabilitationsController : Controller
     {
         if (id != input.Id) return BadRequest();
         if (!ModelState.IsValid) return View(input);
-        var agentId = await _service.UpdateAsync(input);
+        int agentId;
+        try
+        {
+            agentId = await _service.UpdateAsync(input, input.RowVersion ?? Array.Empty<byte>());
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            ModelState.AddModelError(string.Empty, "Modifié entre-temps par un autre utilisateur. Rechargez la page.");
+            return View(input);
+        }
         if (agentId == 0) return NotFound();
         TempData["Success"] = "Habilitation mise à jour.";
         return RedirectToAction("Details", "Personnel", new { id = agentId });

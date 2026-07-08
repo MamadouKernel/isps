@@ -41,10 +41,11 @@ public sealed class HabilitationService : IHabilitationService
     public Task<Habilitation?> GetByIdAsync(int id)
         => _db.Habilitations.Include(h => h.Agent).FirstOrDefaultAsync(h => h.Id == id);
 
-    public async Task<int> UpdateAsync(Habilitation input)
+    public async Task<int> UpdateAsync(Habilitation input, byte[] rowVersion)
     {
         var e = await _db.Habilitations.FirstOrDefaultAsync(h => h.Id == input.Id);
         if (e is null) return 0;
+        _db.Entry(e).Property(nameof(Habilitation.RowVersion)).OriginalValue = rowVersion;
         e.Category = input.Category;
         e.Title = input.Title.Trim();
         e.Issuer = input.Issuer?.Trim() ?? string.Empty;
@@ -58,9 +59,11 @@ public sealed class HabilitationService : IHabilitationService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        // Soft-delete, cohérent avec ISoftDeletable (voir RestrictedZoneService.DeleteAsync).
         var entity = await _db.Habilitations.FirstOrDefaultAsync(h => h.Id == id);
         if (entity is null) return false;
-        _db.Habilitations.Remove(entity);
+        entity.IsDeleted = true;
+        entity.DeletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("DeleteHabilitation", $"#{id}");
         return true;

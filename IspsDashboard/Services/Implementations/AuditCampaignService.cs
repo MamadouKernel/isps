@@ -29,29 +29,41 @@ public sealed class AuditCampaignService : IAuditCampaignService
 
     public async Task<SecurityAudit> CreateAsync(SecurityAudit input, bool seedChecklist)
     {
-        input.CreatedAt = DateTime.UtcNow;
-        input.Auditor = input.Auditor?.Trim() ?? string.Empty;
-        input.Scope = input.Scope?.Trim() ?? string.Empty;
+        // Reconstruit une entité neuve à partir des seuls champs légitimes d'un formulaire de
+        // création : ne jamais persister input tel quel, sous peine de laisser un champ de
+        // formulaire supplémentaire (Status, CompletedDate, Findings...) fabriquer un audit
+        // déjà "clôturé / conforme" sans passer par le vrai processus de clôture.
+        var entity = new SecurityAudit
+        {
+            Title = input.Title.Trim(),
+            Type = input.Type,
+            Status = AuditStatus.Planifie,
+            ScheduledDate = input.ScheduledDate,
+            Auditor = input.Auditor?.Trim() ?? string.Empty,
+            Scope = input.Scope?.Trim() ?? string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
         if (seedChecklist)
         {
             var template = GetIspsChecklistTemplate();
-            input.Findings = template.Select((item, idx) => new AuditFinding
+            entity.Findings = template.Select((item, idx) => new AuditFinding
             {
                 ItemNumber = idx + 1,
                 CheckItem = item,
                 Result = FindingResult.Conforme
             }).ToList();
         }
-        _db.SecurityAudits.Add(input);
-        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => input.Reference = r, () => NextReference(input.ScheduledDate.Year));
-        await _audit.LogAsync("CreateAudit", $"{input.Reference} — {input.Title}");
-        return input;
+        _db.SecurityAudits.Add(entity);
+        await ReferenceGenerator.SaveWithUniqueReferenceAsync(_db, r => entity.Reference = r, () => NextReference(entity.ScheduledDate.Year));
+        await _audit.LogAsync("CreateAudit", $"{entity.Reference} — {entity.Title}");
+        return entity;
     }
 
-    public async Task<bool> UpdateHeaderAsync(SecurityAudit input)
+    public async Task<bool> UpdateHeaderAsync(SecurityAudit input, byte[] rowVersion)
     {
         var e = await _db.SecurityAudits.FirstOrDefaultAsync(a => a.Id == input.Id);
         if (e is null) return false;
+        _db.Entry(e).Property(nameof(SecurityAudit.RowVersion)).OriginalValue = rowVersion;
         e.Title = input.Title.Trim();
         e.Type = input.Type;
         e.ScheduledDate = input.ScheduledDate;
