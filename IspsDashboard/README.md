@@ -21,7 +21,7 @@ Application web de sûreté portuaire conforme au **Code ISPS** (International S
 | Sécurité HTTP | CSP par nonce (aucun `unsafe-inline`), X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
 | Logs | **Serilog** (console + fichier rotatif quotidien `logs/`) |
 | Mobile | **PWA** installable (manifest + service worker) |
-| Tests | **xUnit** (85 tests) + EF Core InMemory |
+| Tests | **xUnit** (127 tests) — unitaires (EF Core InMemory) + intégration bout-en-bout (WebApplicationFactory + SQLite) |
 
 Architecture en couches dans un seul projet :
 ```
@@ -227,7 +227,11 @@ Le plus simple sur IIS : ajouter une **liaison HTTPS au site IIS** (certificat g
 cd IspsDashboard.Tests
 dotnet test
 ```
-85 tests unitaires couvrant la logique métier critique (codes couleur exercices, scores radar, expiration habilitations et laissez-passer, références séquentielles, score de conformité audit, chiffrement des secrets, etc.), ainsi que des tests de régression dédiés : assignation de masse (10 services) et concurrence optimiste (RowVersion).
+127 tests :
+- **Unitaires** (logique métier critique, EF Core InMemory) : codes couleur exercices, scores radar, expiration habilitations et laissez-passer, références séquentielles, score de conformité audit, chiffrement des secrets, assignation de masse (10 services), concurrence optimiste (RowVersion).
+- **Intégration** (`IspsDashboard.Tests/Integration/`, WebApplicationFactory + SQLite en mémoire) : parcours de connexion réel, redirection ouverte, énumération de comptes, CSRF, en-têtes de sécurité, `/uploads` sans authentification, autorisation par rôle, assignation de masse via une vraie requête HTTP, CRUD bout-en-bout sur plusieurs modules, balayage d'accès anonyme sur 22 contrôleurs.
+
+Couverture mesurée (coverlet) : ~42 % sur la couche Services (logique métier), ~9 % sur les contrôleurs, ~7 % globale (la majorité des lignes du dépôt sont des migrations EF Core et du Razor généré, pas de la logique applicative).
 
 ---
 
